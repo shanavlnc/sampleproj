@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, Dimensions, ImageSourcePropType } from 'react-native';
+import { View, Text, Image, StyleSheet, Dimensions } from 'react-native';
 import { Pet } from '../types';
 import { theme } from '../constants/colors';
 
@@ -10,14 +10,9 @@ interface PetCardProps {
 }
 
 const PetCard: React.FC<PetCardProps> = ({ pet }) => {
-  // Convert the imageUrl string to the correct type
-  const imageSource: ImageSourcePropType = typeof pet.imageUrl === 'string' 
-    ? { uri: pet.imageUrl } 
-    : pet.imageUrl;
-
   return (
     <View style={styles.card}>
-      <Image source={imageSource} style={styles.image} resizeMode="cover" />
+      <Image source={pet.imageUrl} style={styles.image} resizeMode="cover" />
       <View style={styles.infoContainer}>
         <View style={styles.nameContainer}>
           <Text style={styles.name}>{pet.name}</Text>

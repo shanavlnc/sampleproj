@@ -1,24 +1,20 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import Swiper from 'react-native-deck-swiper';
 import { placeholderPets } from '../../constants/pets';
 import { theme } from '../../constants/colors';
 import PetCard from '../../components/PetCard';
 import SwipeButtons from '../../components/SwipeButtons';
 import { useNavigation } from '@react-navigation/native';
-import { Pet } from '../../types';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Pet, UserStackParamList } from '../../types'; // Changed to UserStackParamList
 
-type RootStackParamList = {
-  Home: undefined;
-  AdoptionForm: { pet: Pet };
-  PetDetail: { pet: Pet };
-};
-
-type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
+// Update to use UserStackParamList since PetDetail is in the user stack
+type HomeScreenNavigationProp = NativeStackNavigationProp<UserStackParamList, 'Home'>;
 
 const HomeScreen = () => {
-  const [pets] = useState(placeholderPets.filter(pet => pet.status === 'available'));
+  const [pets, setPets] = useState(placeholderPets.filter(pet => pet.status === 'available'));
   const [swipedAll, setSwipedAll] = useState(false);
   const swiperRef = useRef<Swiper<Pet>>(null);
   const navigation = useNavigation<HomeScreenNavigationProp>();
@@ -27,34 +23,18 @@ const HomeScreen = () => {
     console.log(`Swiped left on ${pets[cardIndex].name}`);
   };
 
-  const onSwipedRight = (cardIndex: number) => {
+  const onSwipedRight = async (cardIndex: number) => {
     const pet = pets[cardIndex];
-    Alert.alert(
-      `You liked ${pet.name}!`,
-      'Would you like to adopt this pet?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Adopt', onPress: () => navigation.navigate('AdoptionForm', { pet }) },
-      ]
-    );
-  };
-
-  const onSwipedAll = () => {
-    setSwipedAll(true);
-  };
-
-  const swipeLeft = () => {
-    swiperRef.current?.swipeLeft();
-  };
-
-  const swipeRight = () => {
-    swiperRef.current?.swipeRight();
-  };
-
-  const showDetails = () => {
-    const currentIndex = swiperRef.current?.state.firstCardIndex;
-    if (currentIndex !== undefined && currentIndex < pets.length) {
-      navigation.navigate('PetDetail', { pet: pets[currentIndex] });
+    try {
+      const savedPets = await AsyncStorage.getItem('savedPets');
+      let updatedSavedPets = savedPets ? JSON.parse(savedPets) : [];
+      
+      if (!updatedSavedPets.some((p: Pet) => p.id === pet.id)) {
+        updatedSavedPets.push(pet);
+        await AsyncStorage.setItem('savedPets', JSON.stringify(updatedSavedPets));
+      }
+    } catch (error) {
+      console.error('Error saving pet:', error);
     }
   };
 
@@ -65,11 +45,9 @@ const HomeScreen = () => {
           <Swiper
             ref={swiperRef}
             cards={pets}
-            renderCard={(pet: Pet) => <PetCard pet={pet} />}
+            renderCard={(pet) => <PetCard pet={pet} />}
             onSwipedLeft={onSwipedLeft}
             onSwipedRight={onSwipedRight}
-            onSwipedAll={onSwipedAll}
-            cardIndex={0}
             backgroundColor="white"
             stackSize={3}
             verticalSwipe={false}
@@ -80,6 +58,7 @@ const HomeScreen = () => {
                   label: {
                     backgroundColor: theme.secondary,
                     borderColor: theme.secondary,
+                    color: 'white',
                     borderWidth: 1,
                   },
                   wrapper: {
@@ -97,6 +76,7 @@ const HomeScreen = () => {
                   label: {
                     backgroundColor: theme.primary,
                     borderColor: theme.primary,
+                    color: 'white',
                     borderWidth: 1,
                   },
                   wrapper: {
@@ -109,19 +89,23 @@ const HomeScreen = () => {
                 },
               },
             }}
-            animateOverlayLabelsOpacity
-            animateCardOpacity
           />
           <SwipeButtons
-            onPressLeft={swipeLeft}
-            onPressRight={swipeRight}
-            onPressInfo={showDetails}
+            onPressLeft={() => swiperRef.current?.swipeLeft()}
+            onPressRight={() => swiperRef.current?.swipeRight()}
+            onPressInfo={() => {
+              if (swiperRef.current) {
+                const currentIndex = swiperRef.current.state.firstCardIndex;
+                if (currentIndex < pets.length) {
+                  navigation.navigate('PetDetail', { pet: pets[currentIndex] });
+                }
+              }
+            }}
           />
         </>
       ) : (
         <View style={styles.noPetsContainer}>
           <Text style={styles.noPetsText}>No pets available for adoption right now.</Text>
-          <Text style={styles.noPetsSubText}>Please check back later!</Text>
         </View>
       )}
     </View>
@@ -142,13 +126,7 @@ const styles = StyleSheet.create({
   noPetsText: {
     fontSize: 18,
     textAlign: 'center',
-    marginBottom: 10,
     color: theme.text,
-  },
-  noPetsSubText: {
-    fontSize: 16,
-    textAlign: 'center',
-    color: theme.textLight,
   },
 });
 

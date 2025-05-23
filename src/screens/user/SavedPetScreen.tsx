@@ -1,26 +1,25 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, ImageSourcePropType } from 'react-native';
-import { Pet } from '../../types';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { View, Text, FlatList, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { theme } from '../../constants/colors';
-import { StackNavigationProp } from '@react-navigation/stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Pet, UserStackParamList } from '../../types';
 
-type RootStackParamList = {
-  PetDetail: { pet: Pet };
-  // Add other screens here if needed
-};
+// Define navigation prop type
+type SavedPetsScreenNavigationProp = NativeStackNavigationProp<UserStackParamList, 'Home'>;
 
 const SavedPetsScreen = () => {
   const [savedPets, setSavedPets] = useState<Pet[]>([]);
-  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<SavedPetsScreenNavigationProp>();
 
   useEffect(() => {
     const loadSavedPets = async () => {
       try {
-        const saved = await AsyncStorage.getItem('savedPets');
-        if (saved) {
-          setSavedPets(JSON.parse(saved));
+        const savedPetsData = await AsyncStorage.getItem('savedPets');
+        if (savedPetsData) {
+          const parsedPets = JSON.parse(savedPetsData) as Pet[];
+          setSavedPets(parsedPets);
         }
       } catch (error) {
         console.error('Error loading saved pets:', error);
@@ -40,35 +39,30 @@ const SavedPetsScreen = () => {
     }
   };
 
-  const renderItem = ({ item }: { item: Pet }) => (
-    <TouchableOpacity 
-      style={styles.petItem}
-      onPress={() => navigation.navigate('PetDetail', { pet: item })}
-    >
-      <Image 
-        source={{ uri: item.imageUrl }} // Fixed: Convert string to ImageSourcePropType
-        style={styles.petImage} 
-      />
-      <View style={styles.petInfo}>
-        <Text style={styles.petName}>{item.name}</Text>
-        <Text style={styles.petDetails}>{item.breed} • {item.age}</Text>
-      </View>
-      <TouchableOpacity 
-        style={styles.removeButton}
-        onPress={() => removePet(item.id)}
-      >
-        <Text style={styles.removeButtonText}>×</Text>
-      </TouchableOpacity>
-    </TouchableOpacity>
-  );
-
   return (
     <View style={styles.container}>
       {savedPets.length > 0 ? (
         <FlatList
           data={savedPets}
-          renderItem={renderItem}
           keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <TouchableOpacity 
+              style={styles.petItem}
+              onPress={() => navigation.navigate('PetDetail', { pet: item })}
+            >
+              <Image source={item.imageUrl} style={styles.petImage} />
+              <View style={styles.petInfo}>
+                <Text style={styles.petName}>{item.name}</Text>
+                <Text style={styles.petDetails}>{item.breed} • {item.age}</Text>
+              </View>
+              <TouchableOpacity 
+                style={styles.removeButton}
+                onPress={() => removePet(item.id)}
+              >
+                <Text style={styles.removeButtonText}>×</Text>
+              </TouchableOpacity>
+            </TouchableOpacity>
+          )}
           contentContainerStyle={styles.listContent}
         />
       ) : (
@@ -99,7 +93,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 3,
+    shadowRadius: 1.41,
     elevation: 2,
   },
   petImage: {

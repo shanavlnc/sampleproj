@@ -1,4 +1,5 @@
 interface Pet {
+  createdAt: any;
   id: string;
   name: string;
   breed: string;
@@ -17,8 +18,9 @@ export const placeholderPets: Pet[] = [
     age: '2 years',
     gender: 'Male',
     description: 'Very friendly and loves to play fetch. Gets along well with other dogs.',
-    imageUrl: require('../assets/images/pets/smiley.png'),
-    status: 'available'
+    imageUrl: require('../assets/images/smiley.png'),
+    status: 'available',
+    createdAt: undefined
   },
   {
     id: '2',
@@ -27,8 +29,9 @@ export const placeholderPets: Pet[] = [
     age: '1.5 years',
     gender: 'Male',
     description: 'Loves cuddles and naps. Already neutered and vaccinated.',
-    imageUrl: require('../assets/images/pets/owen.png'),
-    status: 'available'
+    imageUrl: require('../assets/images/owen.png'),
+    status: 'available',
+    createdAt: undefined
   },
   {
     id: '3',
@@ -37,10 +40,11 @@ export const placeholderPets: Pet[] = [
     age: '3 years',
     gender: 'Female',
     description: 'Gentle and well-behaved. Great with children and other pets.',
-    imageUrl: require('../assets/images/pets/vicky.png'),
-    status: 'available'
+    imageUrl: require('../assets/images/vicky.png'),
+    status: 'available',
+    createdAt: undefined
   },
-  // Continue with all 30+ pets...
+  // Add all other pets following the same structure
   {
     id: '30',
     name: 'Walter White',
@@ -48,7 +52,8 @@ export const placeholderPets: Pet[] = [
     age: '4 years',
     gender: 'Male',
     description: 'A calm and dignified cat who enjoys quiet environments.',
-    imageUrl: require('../assets/images/pets/walter.png'),
-    status: 'available'
+    imageUrl: require('../assets/images/walter.png'),
+    status: 'available',
+    createdAt: undefined
   }
 ];

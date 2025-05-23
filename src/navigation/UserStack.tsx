@@ -9,14 +9,23 @@ import AboutScreen from '../screens/user/AboutScreen';
 import PetDetailScreen from '../screens/user/PetDetailsScreen';
 import AdoptionFormScreen from '../screens/user/AdoptionFormScreen';
 
-const Tab = createBottomTabNavigator();
-const Stack = createNativeStackNavigator();
+export type UserStackParamList = {
+  Home: undefined;
+  PetDetail: { pet: any };
+  AdoptionForm: { pet: any };
+};
+
+export type UserTabParamList = {
+  Browse: undefined;
+  Saved: undefined;
+  About: undefined;
+};
+
+const Tab = createBottomTabNavigator<UserTabParamList>();
+const Stack = createNativeStackNavigator<UserStackParamList>();
 
 const HomeStack = () => (
-  <Stack.Navigator 
-    id={undefined}
-    screenOptions={{ headerShown: false }}
-  >
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="Home" component={HomeScreen} />
     <Stack.Screen name="PetDetail" component={PetDetailScreen} />
     <Stack.Screen name="AdoptionForm" component={AdoptionFormScreen} />
@@ -25,22 +34,15 @@ const HomeStack = () => (
 
 const UserStack = () => (
   <Tab.Navigator
-    id={undefined}  // Add this line to fix the error
     screenOptions={({ route }) => ({
       tabBarIcon: ({ focused, color, size }) => {
-        let iconName: 
-          | 'paw' 
-          | 'paw-outline' 
-          | 'heart' 
-          | 'heart-outline' 
-          | 'information-circle' 
-          | 'information-circle-outline';
+        let iconName: any;
 
         if (route.name === 'Browse') {
           iconName = focused ? 'paw' : 'paw-outline';
         } else if (route.name === 'Saved') {
           iconName = focused ? 'heart' : 'heart-outline';
-        } else {
+        } else if (route.name === 'About') {
           iconName = focused ? 'information-circle' : 'information-circle-outline';
         }
 

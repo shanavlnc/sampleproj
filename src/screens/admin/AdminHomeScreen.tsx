@@ -4,25 +4,25 @@ import { useNavigation } from '@react-navigation/native';
 import { theme } from '../../constants/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
+import { AdminStackParamList } from '../../types/index';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-// Define valid icon names as a type
-type IconName = 
-  | 'add-circle-outline'
-  | 'document-text-outline'
-  | 'checkmark-done-outline'
-  | 'log-out-outline'
-  | 'chevron-forward';
-
-interface MenuItem {
-  id: string;
-  title: string;
-  icon: IconName;
-  screen: string;
-}
+// Define navigation prop type
+type AdminHomeScreenNavigationProp = NativeStackNavigationProp<
+  AdminStackParamList,
+  'AdminHome'
+>;
 
 const AdminHomeScreen = () => {
-  const navigation = useNavigation();
-  const { signOut } = useAuth();
+  const navigation = useNavigation<AdminHomeScreenNavigationProp>();
+  const { logout } = useAuth();
+
+  type MenuItem = {
+    id: string;
+    title: string;
+    icon: 'add-circle-outline' | 'document-text-outline' | 'checkmark-done-outline';
+    screen: keyof Omit<AdminStackParamList, 'AdminHome'>;
+  };
 
   const menuItems: MenuItem[] = [
     {
@@ -49,7 +49,7 @@ const AdminHomeScreen = () => {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Shelter Admin Dashboard</Text>
-        <TouchableOpacity onPress={signOut}>
+        <TouchableOpacity onPress={logout}>
           <Ionicons name="log-out-outline" size={24} color={theme.danger} />
         </TouchableOpacity>
       </View>
@@ -60,7 +60,7 @@ const AdminHomeScreen = () => {
         renderItem={({ item }) => (
           <TouchableOpacity 
             style={styles.menuItem} 
-            onPress={() => navigation.navigate(item.screen as never)}
+            onPress={() => navigation.navigate(item.screen)}
           >
             <Ionicons name={item.icon} size={24} color={theme.primary} />
             <Text style={styles.menuItemText}>{item.title}</Text>

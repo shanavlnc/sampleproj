@@ -1,53 +1,63 @@
-// context/AuthContext.tsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-interface LocalUser {
-  email: string;
-  isAdmin: boolean;
-}
+import { useApplication } from './ApplicationContext';
 
 interface AuthContextType {
-  user: LocalUser | null;
+  user: { email: string; isAdmin: boolean } | null;
   isLoading: boolean;
-  signIn: (email: string, isAdmin?: boolean) => Promise<void>;
-  signOut: () => Promise<void>;
+  login: (email: string, password: string) => Promise<boolean>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   isLoading: true,
-  signIn: async () => {},
-  signOut: async () => {}
+  login: async () => false,
+  logout: async () => {}
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<LocalUser | null>(null);
+  const [user, setUser] = useState<{ email: string; isAdmin: boolean } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { loadData } = useApplication();
 
-  // Load saved user on startup
   useEffect(() => {
     const loadUser = async () => {
-      const savedUser = await AsyncStorage.getItem('user');
-      if (savedUser) setUser(JSON.parse(savedUser));
-      setIsLoading(false);
+      try {
+        const storedUser = await AsyncStorage.getItem('user');
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+        }
+      } catch (error) {
+        console.error('Error loading user:', error);
+      } finally {
+        setIsLoading(false);
+      }
     };
+
     loadUser();
   }, []);
 
-  const signIn = async (email: string, isAdmin = false) => {
-    const newUser = { email, isAdmin };
-    await AsyncStorage.setItem('user', JSON.stringify(newUser));
-    setUser(newUser);
+  const login = async (email: string, password: string) => {
+    // Simple admin check - in real app, use proper authentication
+    const isAdmin = email.endsWith('@shelter.com');
+    if (isAdmin || password === 'demo123') {
+      const userData = { email, isAdmin };
+      await AsyncStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
+      await loadData(); // Load application data after login
+      return true;
+    }
+    return false;
   };
 
-  const signOut = async () => {
+  const logout = async () => {
     await AsyncStorage.removeItem('user');
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

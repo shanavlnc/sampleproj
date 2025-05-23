@@ -1,3 +1,6 @@
+import { ReactNode } from 'react'; // Added ReactNode import
+
+// Pet and Application types
 export interface Pet {
   id: string;
   name: string;
@@ -5,58 +8,72 @@ export interface Pet {
   age: string;
   gender: string;
   description: string;
-  imageUrl: string;
-  status: 'available' | 'adopted' | 'pending' | 'removed';
-  createdAt?: Date;
+  imageUrl: any; // Can be require(local) or {uri: remote}
+  status: 'available' | 'adopted';
+  createdAt: Date;
 }
 
 export interface Application {
+  fullName: ReactNode;
   id: string;
   petId: string;
   petName: string;
-  fullName: string;
-  address: string;
-  phone: string;
-  email: string;
-  birthdate: string;
-  occupation: string;
-  company?: string;
-  socialMedia?: string;
-  maritalStatus: string;
-  alternateContactName?: string;
-  alternateContactRelationship?: string;
-  alternateContactPhone?: string;
-  alternateContactEmail?: string;
-  hasAdoptedBefore: boolean;
-  householdMembers: string;
-  childrenAges?: string;
-  homeType: string;
-  hasYard: boolean;
-  yardFenced?: boolean;
-  hoursAlone: string;
-  hasOtherPets: boolean;
-  otherPetsInfo?: string;
-  hasVet: boolean;
-  vetInfo?: string;
-  petExperience: string;
-  petActivities: string;
-  whyAdopt: string;
-  agreement: boolean;
+  applicantName: string;
+  applicantEmail: string;
+  applicantPhone: string;
   status: 'pending' | 'approved' | 'rejected';
+  applicationDate: Date;
+  reviewedDate?: Date;
+  address?: string;
+  occupation?: string;
+  hasExperience?: boolean;
+  homeType?: string;
   createdAt: Date;
-  reviewedAt?: Date;
 }
 
-export interface User {
-  id: string;
-  email: string;
-  role: 'admin' | 'user';
-  name?: string;
-  phone?: string;
-}
+// Navigation types
+export type RootStackParamList = {
+  Welcome: undefined;
+  Login: undefined;
+  UserStack: undefined;
+  AdminStack: undefined;
+  Home: undefined;
+  PetDetail: { pet: Pet };
+};
 
+export type AdminStackParamList = {
+  AdminHome: undefined;
+  AddPet: undefined;
+  ReviewApplications: undefined;
+  ApprovedApplications: undefined;
+};
+
+export type UserStackParamList = {
+  Home: undefined;
+  PetDetail: { pet: Pet };
+  AdoptionForm: { pet: Pet };
+};
+
+export type UserTabParamList = {
+  Browse: undefined;
+  Saved: undefined;
+  About: undefined;
+};
+
+// Context types
 export interface AuthContextType {
-  user: User | null;
+  user: { email: string; isAdmin: boolean } | null;
   isLoading: boolean;
-  signOut: () => Promise<void>;
+  login: (email: string, password: string) => Promise<boolean>;
+  logout: () => Promise<void>;
 }
+
+// Additional utility types
+export type ScreenNavigationProp<T extends keyof RootStackParamList> = {
+  navigate: (screen: T, params?: RootStackParamList[T]) => void;
+  goBack: () => void;
+};
+
+export type RouteProp<T extends keyof RootStackParamList> = {
+  params: RootStackParamList[T];
+};

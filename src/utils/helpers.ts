@@ -1,52 +1,123 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Pet } from '../types';
+import { Pet, Application } from '../types';
 
-// Date formatting
-export const formatDate = (date: Date | string): string => {
-  const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-};
-
-// Storage operations for saved pets
-export const savePetToStorage = async (pet: Pet): Promise<void> => {
+// Pet Storage Helpers
+export const savePet = async (pet: Pet): Promise<void> => {
   try {
-    const savedPets = await getSavedPetsFromStorage();
-    if (!savedPets.some((p) => p.id === pet.id)) {
-      savedPets.push(pet);
-      await AsyncStorage.setItem('savedPets', JSON.stringify(savedPets));
+    const pets = await getPets();
+    const existingIndex = pets.findIndex(p => p.id === pet.id);
+    
+    if (existingIndex >= 0) {
+      pets[existingIndex] = pet; // Update existing
+    } else {
+      pets.push(pet); // Add new
     }
+
+    await AsyncStorage.setItem('pets', JSON.stringify(pets));
   } catch (error) {
     console.error('Error saving pet:', error);
     throw error;
   }
 };
 
-export const removePetFromStorage = async (petId: string): Promise<void> => {
+export const getPets = async (): Promise<Pet[]> => {
   try {
-    const savedPets = await getSavedPetsFromStorage();
-    const updatedPets = savedPets.filter((p) => p.id !== petId);
-    await AsyncStorage.setItem('savedPets', JSON.stringify(updatedPets));
+    const petsJson = await AsyncStorage.getItem('pets');
+    return petsJson ? JSON.parse(petsJson) : [];
   } catch (error) {
-    console.error('Error removing pet:', error);
+    console.error('Error getting pets:', error);
+    return [];
+  }
+};
+
+export const deletePet = async (id: string): Promise<void> => {
+  try {
+    const pets = await getPets();
+    const updatedPets = pets.filter(pet => pet.id !== id);
+    await AsyncStorage.setItem('pets', JSON.stringify(updatedPets));
+  } catch (error) {
+    console.error('Error deleting pet:', error);
     throw error;
   }
 };
 
-export const getSavedPetsFromStorage = async (): Promise<Pet[]> => {
+// Application Storage Helpers
+export const saveApplication = async (app: Application): Promise<void> => {
   try {
-    const savedPets = await AsyncStorage.getItem('savedPets');
-    return savedPets ? JSON.parse(savedPets) : [];
+    const apps = await getApplications();
+    apps.push(app);
+    await AsyncStorage.setItem('applications', JSON.stringify(apps));
   } catch (error) {
-    console.error('Error getting saved pets:', error);
+    console.error('Error saving application:', error);
     throw error;
   }
 };
 
-// Form validation helpers
+export const getApplications = async (): Promise<Application[]> => {
+  try {
+    const appsJson = await AsyncStorage.getItem('applications');
+    return appsJson ? JSON.parse(appsJson) : [];
+  } catch (error) {
+    console.error('Error getting applications:', error);
+    return [];
+  }
+};
+
+export const updateApplicationStatus = async (
+  id: string, 
+  status: 'approved' | 'rejected'
+): Promise<void> => {
+  try {
+    const apps = await getApplications();
+    const appIndex = apps.findIndex(app => app.id === id);
+    
+    if (appIndex >= 0) {
+      apps[appIndex].status = status;
+      apps[appIndex].reviewedDate = new Date();
+      await AsyncStorage.setItem('applications', JSON.stringify(apps));
+    }
+  } catch (error) {
+    console.error('Error updating application:', error);
+    throw error;
+  }
+};
+
+// Saved Pets Helpers
+export const savePetToFavorites = async (petId: string): Promise<void> => {
+  try {
+    const favorites = await getFavoritePets();
+    if (!favorites.includes(petId)) {
+      favorites.push(petId);
+      await AsyncStorage.setItem('favorites', JSON.stringify(favorites));
+    }
+  } catch (error) {
+    console.error('Error saving favorite:', error);
+    throw error;
+  }
+};
+
+export const removePetFromFavorites = async (petId: string): Promise<void> => {
+  try {
+    const favorites = await getFavoritePets();
+    const updated = favorites.filter(id => id !== petId);
+    await AsyncStorage.setItem('favorites', JSON.stringify(updated));
+  } catch (error) {
+    console.error('Error removing favorite:', error);
+    throw error;
+  }
+};
+
+export const getFavoritePets = async (): Promise<string[]> => {
+  try {
+    const favoritesJson = await AsyncStorage.getItem('favorites');
+    return favoritesJson ? JSON.parse(favoritesJson) : [];
+  } catch (error) {
+    console.error('Error getting favorites:', error);
+    return [];
+  }
+};
+
+// Form Validation Helpers
 export const validateEmail = (email: string): boolean => {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return re.test(email);
@@ -57,39 +128,11 @@ export const validatePhone = (phone: string): boolean => {
   return re.test(phone);
 };
 
-// String formatting
-export const capitalizeWords = (str: string): string => {
-  return str.replace(/\b\w/g, (char) => char.toUpperCase());
-};
-
-export const formatPhoneNumber = (phone: string): string => {
-  const cleaned = ('' + phone).replace(/\D/g, '');
-  const match = cleaned.match(/^(\d{3})(\d{3})(\d{4})$/);
-  return match ? '(' + match[1] + ') ' + match[2] + '-' + match[3] : phone;
-};
-
-// Age calculation
-export const calculateAge = (birthdate: string): number => {
-  const today = new Date();
-  const birthDate = new Date(birthdate);
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-  
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
-  
-  return age;
-};
-
-// Image handling
-export const getImageSize = async (uri: string): Promise<{ width: number; height: number }> => {
-  return new Promise((resolve) => {
-    Image.getSize(uri, (width, height) => {
-      resolve({ width, height });
-    }, (error) => {
-      console.error('Error getting image size:', error);
-      resolve({ width: 0, height: 0 });
-    });
+// Date Formatting
+export const formatDate = (date: Date): string => {
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
   });
 };

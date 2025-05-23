@@ -1,47 +1,54 @@
 import React from 'react';
-import { View, TextInput, Text, StyleSheet, KeyboardTypeOptions } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Switch } from 'react-native';
 import { theme } from '../constants/colors';
 
 interface FormInputProps {
   label: string;
-  value?: string;
+  value: any;
   onChangeText?: (text: string) => void;
-  onBlur?: () => void;
+  onValueChange?: (value: boolean) => void;
   error?: string;
-  keyboardType?: KeyboardTypeOptions;
   secureTextEntry?: boolean;
   multiline?: boolean;
   numberOfLines?: number;
+  isSwitch?: boolean;
 }
 
 const FormInput: React.FC<FormInputProps> = ({
   label,
   value,
   onChangeText,
-  onBlur,
+  onValueChange,
   error,
-  keyboardType = 'default',
   secureTextEntry = false,
   multiline = false,
-  numberOfLines = 1
+  numberOfLines = 1,
+  isSwitch = false
 }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
-      <TextInput
-        style={[
-          styles.input,
-          multiline && styles.multilineInput,
-          error && styles.errorInput
-        ]}
-        value={value}
-        onChangeText={onChangeText}
-        onBlur={onBlur}
-        keyboardType={keyboardType}
-        secureTextEntry={secureTextEntry}
-        multiline={multiline}
-        numberOfLines={numberOfLines}
-      />
+      {isSwitch ? (
+        <Switch
+          value={value}
+          onValueChange={onValueChange}
+          trackColor={{ false: '#767577', true: theme.primary }}
+          thumbColor={value ? '#f5dd4b' : '#f4f3f4'}
+        />
+      ) : (
+        <TextInput
+          style={[
+            styles.input,
+            multiline && styles.multilineInput,
+            error && styles.errorInput
+          ]}
+          value={value}
+          onChangeText={onChangeText}
+          secureTextEntry={secureTextEntry}
+          multiline={multiline}
+          numberOfLines={numberOfLines}
+        />
+      )}
       {error && <Text style={styles.errorText}>{error}</Text>}
     </View>
   );

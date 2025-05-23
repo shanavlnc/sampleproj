@@ -1,105 +1,33 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, Switch } from 'react-native';
-import { useForm, Controller, SubmitHandler } from 'react-hook-form';
+import { View, Text, ScrollView, StyleSheet, Alert, Switch } from 'react-native';
+import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import FormInput from '../../components/FormInput';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 import { theme } from '../../constants/colors';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { Pet } from '../../types';
-import { StackNavigationProp } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { v4 as uuidv4 } from 'uuid';
-
-type RootStackParamList = {
-  PetDetail: { pet: Pet };
-  Home: undefined;
-};
-
-interface FormData {
-  fullName: string;
-  address: string;
-  phone: string;
-  email: string;
-  birthdate: string;
-  occupation: string;
-  company?: string;
-  socialMedia?: string;
-  maritalStatus: string;
-  alternateContactName?: string;
-  alternateContactRelationship?: string;
-  alternateContactPhone?: string;
-  alternateContactEmail?: string;
-  hasAdoptedBefore: boolean;
-  householdMembers: string;
-  childrenAges?: string;
-  homeType: string;
-  hasYard: boolean;
-  yardFenced?: boolean;
-  hoursAlone: string;
-  hasOtherPets: boolean;
-  otherPetsInfo?: string;
-  hasVet: boolean;
-  vetInfo?: string;
-  petExperience: string;
-  petActivities: string;
-  whyAdopt: string;
-  agreement: boolean;
-}
 
 const schema = yup.object().shape({
   fullName: yup.string().required('Full name is required'),
   address: yup.string().required('Address is required'),
-  phone: yup.string()
-    .required('Phone number is required')
-    .matches(/^[0-9]{10}$/, 'Phone number must be 10 digits'),
+  phone: yup.string().required('Phone number is required'),
   email: yup.string().email('Invalid email').required('Email is required'),
   birthdate: yup.string().required('Birthdate is required'),
   occupation: yup.string().required('Occupation is required'),
-  company: yup.string().optional(),
-  socialMedia: yup.string().optional(),
-  maritalStatus: yup.string().required('Marital status is required'),
-  alternateContactName: yup.string().optional(),
-  alternateContactRelationship: yup.string().optional(),
-  alternateContactPhone: yup.string().optional(),
-  alternateContactEmail: yup.string().optional(),
   hasAdoptedBefore: yup.boolean().required('This field is required'),
   householdMembers: yup.string().required('Please describe household members'),
-  childrenAges: yup.string().optional(),
   homeType: yup.string().required('Please specify your home type'),
-  hasYard: yup.boolean().required('This field is required'),
-  yardFenced: yup.boolean().when('hasYard', {
-    is: true,
-    then: (schema) => schema.required('Please specify if yard is fenced'),
-    otherwise: (schema) => schema.optional()
-  }),
   hoursAlone: yup.string().required('Please specify hours pet would be alone'),
   hasOtherPets: yup.boolean().required('This field is required'),
-  otherPetsInfo: yup.string().when('hasOtherPets', {
-    is: true,
-    then: (schema) => schema.required('Please describe your other pets'),
-    otherwise: (schema) => schema.optional()
-  }),
-  hasVet: yup.boolean().required('This field is required'),
-  vetInfo: yup.string().when('hasVet', {
-    is: true,
-    then: (schema) => schema.required('Please provide vet information'),
-    otherwise: (schema) => schema.optional()
-  }),
   petExperience: yup.string().required('Please describe your pet experience'),
-  petActivities: yup.string().required('Please describe planned activities'),
   whyAdopt: yup.string().required('Please explain why you want to adopt'),
-  agreement: yup.boolean().oneOf([true], 'You must agree to the terms').required(),
+  agreement: yup.boolean().oneOf([true], 'You must agree to the terms'),
 });
 
 const AdoptionFormScreen = () => {
-  const { 
-    control, 
-    handleSubmit, 
-    formState: { errors }, 
-    watch 
-  } = useForm<FormData>({
+  const { control, handleSubmit, formState: { errors } } = useForm({
     resolver: yupResolver(schema),
     defaultValues: {
       fullName: '',
@@ -108,66 +36,40 @@ const AdoptionFormScreen = () => {
       email: '',
       birthdate: '',
       occupation: '',
-      company: undefined,
-      socialMedia: undefined,
-      maritalStatus: '',
-      alternateContactName: undefined,
-      alternateContactRelationship: undefined,
-      alternateContactPhone: undefined,
-      alternateContactEmail: undefined,
       hasAdoptedBefore: false,
       householdMembers: '',
-      childrenAges: undefined,
       homeType: '',
-      hasYard: false,
-      yardFenced: undefined,
       hoursAlone: '',
       hasOtherPets: false,
-      otherPetsInfo: undefined,
-      hasVet: false,
-      vetInfo: undefined,
       petExperience: '',
-      petActivities: '',
       whyAdopt: '',
       agreement: false,
     },
   });
 
-  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+  const navigation = useNavigation();
   const route = useRoute();
-  const { pet } = route.params as { pet: Pet };
+  const { pet } = route.params as { pet: any };
 
-  const hasYard = watch('hasYard');
-  const hasOtherPets = watch('hasOtherPets');
-  const hasVet = watch('hasVet');
-
-  const onSubmit: SubmitHandler<FormData> = async (data) => {
+  const onSubmit = async (data: any) => {
     try {
-      // Get existing applications
-      const existingAppsString = await AsyncStorage.getItem('applications');
-      const existingApps = existingAppsString ? JSON.parse(existingAppsString) : [];
-
-      // Create new application
-      const newApplication = {
-        id: uuidv4(),
+      const applications = await AsyncStorage.getItem('applications');
+      let updatedApplications = applications ? JSON.parse(applications) : [];
+      
+      updatedApplications.push({
         ...data,
         petId: pet.id,
         petName: pet.name,
         status: 'pending',
         createdAt: new Date().toISOString(),
-        reviewedAt: null
-      };
+      });
 
-      // Save updated applications
-      await AsyncStorage.setItem(
-        'applications',
-        JSON.stringify([...existingApps, newApplication])
-      );
-
+      await AsyncStorage.setItem('applications', JSON.stringify(updatedApplications));
+      
       Alert.alert(
         'Application Submitted',
         'Your adoption application has been submitted successfully.',
-        [{ text: 'OK', onPress: () => navigation.navigate('Home') }]
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
     } catch (error) {
       console.error('Error submitting application:', error);
@@ -179,416 +81,211 @@ const AdoptionFormScreen = () => {
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Adoption Application for {pet.name}</Text>
       
-      {/* Personal Information Section */}
       <Text style={styles.sectionTitle}>Personal Information</Text>
-      
       <Controller
         control={control}
-        name="fullName"
         render={({ field: { onChange, value } }) => (
           <FormInput
             label="Full Name"
-            value={value}
             onChangeText={onChange}
+            value={value}
             error={errors.fullName?.message}
           />
         )}
+        name="fullName"
       />
+      
       <Controller
         control={control}
-        name="address"
         render={({ field: { onChange, value } }) => (
           <FormInput
             label="Address"
-            value={value}
             onChangeText={onChange}
+            value={value}
             error={errors.address?.message}
           />
         )}
+        name="address"
       />
       
+<Controller
+  control={control}
+  render={({ field: { onChange, value } }) => (
+    <FormInput
+      label="Phone Number"
+      onChangeText={onChange}
+      value={value}
+      error={errors.phone?.message}
+    />
+  )}
+  name="phone"
+/>
+
       <Controller
         control={control}
-        name="phone"
-        render={({ field: { onChange, value } }) => (
-          <FormInput
-            label="Phone Number"
-            value={value}
-            onChangeText={onChange}
-            keyboardType="phone-pad"
-            error={errors.phone?.message}
-          />
-        )}
-      />
-      
-      <Controller
-        control={control}
-        name="email"
         render={({ field: { onChange, value } }) => (
           <FormInput
             label="Email"
-            value={value}
             onChangeText={onChange}
-            keyboardType="email-address"
+            value={value}
             error={errors.email?.message}
           />
         )}
+        name="email"
       />
-      
+
       <Controller
         control={control}
-        name="birthdate"
         render={({ field: { onChange, value } }) => (
           <FormInput
-            label="Birthdate (MM/DD/YYYY)"
-            value={value}
+            label="Birthdate"
             onChangeText={onChange}
+            value={value}
             error={errors.birthdate?.message}
           />
         )}
+        name="birthdate"
       />
       
       <Controller
         control={control}
-        name="occupation"
         render={({ field: { onChange, value } }) => (
           <FormInput
             label="Occupation"
-            value={value}
             onChangeText={onChange}
+            value={value}
             error={errors.occupation?.message}
           />
         )}
+        name="occupation"
       />
       
+      <Text style={styles.sectionTitle}>Living Situation</Text>
       <Controller
         control={control}
-        name="company"
         render={({ field: { onChange, value } }) => (
           <FormInput
-            label="Company (Optional)"
-            value={value}
+            label="Household Members"
             onChangeText={onChange}
-            error={errors.company?.message}
-          />
-        )}
-      />
-      
-      <Controller
-        control={control}
-        name="socialMedia"
-        render={({ field: { onChange, value } }) => (
-          <FormInput
-            label="Social Media (Optional)"
             value={value}
-            onChangeText={onChange}
-            error={errors.socialMedia?.message}
-          />
-        )}
-      />
-      
-      <Controller
-        control={control}
-        name="maritalStatus"
-        render={({ field: { onChange, value } }) => (
-          <FormInput
-            label="Marital Status"
-            value={value}
-            onChangeText={onChange}
-            error={errors.maritalStatus?.message}
-          />
-        )}
-      />
-      
-      {/* Alternate Contact Section */}
-      <Text style={styles.sectionTitle}>Alternate Contact</Text>
-      
-      <Controller
-        control={control}
-        name="alternateContactName"
-        render={({ field: { onChange, value } }) => (
-          <FormInput
-            label="Full Name (Optional)"
-            value={value}
-            onChangeText={onChange}
-            error={errors.alternateContactName?.message}
-          />
-        )}
-      />
-      
-      <Controller
-        control={control}
-        name="alternateContactRelationship"
-        render={({ field: { onChange, value } }) => (
-          <FormInput
-            label="Relationship (Optional)"
-            value={value}
-            onChangeText={onChange}
-            error={errors.alternateContactRelationship?.message}
-          />
-        )}
-      />
-      
-      <Controller
-        control={control}
-        name="alternateContactPhone"
-        render={({ field: { onChange, value } }) => (
-          <FormInput
-            label="Phone Number (Optional)"
-            value={value}
-            onChangeText={onChange}
-            keyboardType="phone-pad"
-            error={errors.alternateContactPhone?.message}
-          />
-        )}
-      />
-      
-      <Controller
-        control={control}
-        name="alternateContactEmail"
-        render={({ field: { onChange, value } }) => (
-          <FormInput
-            label="Email (Optional)"
-            value={value}
-            onChangeText={onChange}
-            keyboardType="email-address"
-            error={errors.alternateContactEmail?.message}
-          />
-        )}
-      />
-      
-      {/* Household Information Section */}
-      <Text style={styles.sectionTitle}>Household Information</Text>
-      
-      <View style={styles.switchContainer}>
-        <Text style={styles.switchLabel}>Have you adopted before?</Text>
-        <Controller
-          control={control}
-          name="hasAdoptedBefore"
-          render={({ field: { onChange, value } }) => (
-            <Switch
-              value={value}
-              onValueChange={onChange}
-            />
-          )}
-        />
-      </View>
-      {errors.hasAdoptedBefore && <Text style={styles.errorText}>{errors.hasAdoptedBefore.message}</Text>}
-      
-      <Controller
-        control={control}
-        name="householdMembers"
-        render={({ field: { onChange, value } }) => (
-          <FormInput
-            label="Who lives in your household?"
-            value={value}
-            onChangeText={onChange}
             multiline
             numberOfLines={3}
             error={errors.householdMembers?.message}
           />
         )}
+        name="householdMembers"
       />
       
       <Controller
         control={control}
-        name="childrenAges"
         render={({ field: { onChange, value } }) => (
           <FormInput
-            label="Children's Ages (Optional)"
-            value={value}
+            label="Home Type (House, Apartment, etc.)"
             onChangeText={onChange}
-            error={errors.childrenAges?.message}
-          />
-        )}
-      />
-      
-      <Controller
-        control={control}
-        name="homeType"
-        render={({ field: { onChange, value } }) => (
-          <FormInput
-            label="Type of Home (House, Apartment, etc.)"
             value={value}
-            onChangeText={onChange}
             error={errors.homeType?.message}
           />
         )}
+        name="homeType"
       />
       
+      <Controller
+        control={control}
+        render={({ field: { onChange, value } }) => (
+          <FormInput
+            label="Hours Pet Would Be Alone Daily"
+            onChangeText={onChange}
+            value={value}
+            error={errors.hoursAlone?.message}
+          />
+        )}
+        name="hoursAlone"
+      />
+      
+      <Text style={styles.sectionTitle}>Pet Experience</Text>
       <View style={styles.switchContainer}>
-        <Text style={styles.switchLabel}>Do you have a yard?</Text>
+        <Text style={styles.switchLabel}>Have you adopted before?</Text>
         <Controller
           control={control}
-          name="hasYard"
           render={({ field: { onChange, value } }) => (
             <Switch
               value={value}
               onValueChange={onChange}
+              trackColor={{ false: '#767577', true: theme.primary }}
+              thumbColor={value ? '#f5dd4b' : '#f4f3f4'}
             />
           )}
+          name="hasAdoptedBefore"
         />
       </View>
-      {errors.hasYard && <Text style={styles.errorText}>{errors.hasYard.message}</Text>}
-      
-      {hasYard && (
-        <View style={styles.switchContainer}>
-          <Text style={styles.switchLabel}>Is the yard fenced?</Text>
-          <Controller
-            control={control}
-            name="yardFenced"
-            render={({ field: { onChange, value } }) => (
-              <Switch
-                value={value || false}
-                onValueChange={onChange}
-              />
-            )}
-          />
-        </View>
-      )}
-      {errors.yardFenced && <Text style={styles.errorText}>{errors.yardFenced.message}</Text>}
-      
-      <Controller
-        control={control}
-        name="hoursAlone"
-        render={({ field: { onChange, value } }) => (
-          <FormInput
-            label="How many hours per day will the pet be alone?"
-            value={value}
-            onChangeText={onChange}
-            error={errors.hoursAlone?.message}
-          />
-        )}
-      />
-      
-      {/* Pet Experience Section */}
-      <Text style={styles.sectionTitle}>Pet Experience</Text>
       
       <View style={styles.switchContainer}>
         <Text style={styles.switchLabel}>Do you have other pets?</Text>
         <Controller
           control={control}
+          render={({ field: { onChange, value } }) => (
+            <Switch
+              value={value}
+              onValueChange={onChange}
+              trackColor={{ false: '#767577', true: theme.primary }}
+              thumbColor={value ? '#f5dd4b' : '#f4f3f4'}
+            />
+          )}
           name="hasOtherPets"
-          render={({ field: { onChange, value } }) => (
-            <Switch
-              value={value}
-              onValueChange={onChange}
-            />
-          )}
         />
       </View>
-      {errors.hasOtherPets && <Text style={styles.errorText}>{errors.hasOtherPets.message}</Text>}
-      
-      {hasOtherPets && (
-        <Controller
-          control={control}
-          name="otherPetsInfo"
-          render={({ field: { onChange, value } }) => (
-            <FormInput
-              label="Tell us about your other pets"
-              value={value}
-              onChangeText={onChange}
-              multiline
-              numberOfLines={3}
-              error={errors.otherPetsInfo?.message}
-            />
-          )}
-        />
-      )}
-      
-      <View style={styles.switchContainer}>
-        <Text style={styles.switchLabel}>Do you have a veterinarian?</Text>
-        <Controller
-          control={control}
-          name="hasVet"
-          render={({ field: { onChange, value } }) => (
-            <Switch
-              value={value}
-              onValueChange={onChange}
-            />
-          )}
-        />
-      </View>
-      {errors.hasVet && <Text style={styles.errorText}>{errors.hasVet.message}</Text>}
-      
-      {hasVet && (
-        <Controller
-          control={control}
-          name="vetInfo"
-          render={({ field: { onChange, value } }) => (
-            <FormInput
-              label="Veterinarian name and contact information"
-              value={value}
-              onChangeText={onChange}
-              error={errors.vetInfo?.message}
-            />
-          )}
-        />
-      )}
       
       <Controller
         control={control}
-        name="petExperience"
         render={({ field: { onChange, value } }) => (
           <FormInput
-            label="Describe your experience with pets"
-            value={value}
+            label="Describe your pet experience"
             onChangeText={onChange}
+            value={value}
             multiline
             numberOfLines={4}
             error={errors.petExperience?.message}
           />
         )}
+        name="petExperience"
       />
       
       <Controller
         control={control}
-        name="petActivities"
-        render={({ field: { onChange, value } }) => (
-          <FormInput
-            label="What activities will you do with your pet?"
-            value={value}
-            onChangeText={onChange}
-            multiline
-            numberOfLines={4}
-            error={errors.petActivities?.message}
-          />
-        )}
-      />
-      
-      <Controller
-        control={control}
-        name="whyAdopt"
         render={({ field: { onChange, value } }) => (
           <FormInput
             label="Why do you want to adopt this pet?"
-            value={value}
             onChangeText={onChange}
+            value={value}
             multiline
             numberOfLines={4}
             error={errors.whyAdopt?.message}
           />
         )}
+        name="whyAdopt"
       />
-      {/* Agreement Section */}
+      
       <View style={styles.switchContainer}>
         <Text style={styles.switchLabel}>
-          I agree to provide a loving home and care for this pet
+          I agree to provide a loving home and proper care for this pet
         </Text>
         <Controller
           control={control}
-          name="agreement"
           render={({ field: { onChange, value } }) => (
             <Switch
               value={value}
               onValueChange={onChange}
+              trackColor={{ false: '#767577', true: theme.primary }}
+              thumbColor={value ? '#f5dd4b' : '#f4f3f4'}
             />
           )}
+          name="agreement"
         />
       </View>
-      {errors.agreement && <Text style={styles.errorText}>{errors.agreement.message}</Text>}
+      {errors.agreement && (
+        <Text style={styles.errorText}>You must agree to the terms</Text>
+      )}
       
-      {/* Submit Button */}
       <TouchableOpacity 
         style={styles.submitButton} 
         onPress={handleSubmit(onSubmit)}
@@ -624,7 +321,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     paddingVertical: 10,
     paddingHorizontal: 5,
-    backgroundColor: theme.cardBackground,
+    backgroundColor: 'white',
     borderRadius: 8,
   },
   switchLabel: {

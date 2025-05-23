@@ -1,27 +1,39 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Pet } from '../../types';
 import { theme } from '../../constants/colors';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Pet, UserStackParamList } from '../../types';
 
-// Define the navigation stack types
-type RootStackParamList = {
-  PetDetail: { pet: Pet };
-  AdoptionForm: { pet: Pet };
-};
-
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+// Define navigation prop type
+type PetDetailScreenNavigationProp = NativeStackNavigationProp<UserStackParamList, 'PetDetail'>;
 
 const PetDetailScreen = () => {
-  const navigation = useNavigation<NavigationProp>();
+  const navigation = useNavigation<PetDetailScreenNavigationProp>();
   const route = useRoute();
-  const { pet } = route.params as { pet: Pet };
+  const { pet } = route.params as { pet: Pet }; // Use your Pet interface type
+
+  const handleAdoptPress = async () => {
+    try {
+      const savedPets = await AsyncStorage.getItem('savedPets');
+      let updatedSavedPets = savedPets ? JSON.parse(savedPets) : [];
+      
+      if (!updatedSavedPets.some((p: Pet) => p.id === pet.id)) {
+        updatedSavedPets.push(pet);
+        await AsyncStorage.setItem('savedPets', JSON.stringify(updatedSavedPets));
+      }
+      navigation.navigate('AdoptionForm', { pet });
+    } catch (error) {
+      console.error('Error saving pet:', error);
+      Alert.alert('Error', 'Failed to save pet. Please try again.');
+    }
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Image source={{ uri: pet.imageUrl }} style={styles.image} resizeMode="cover" />
-
+      <Image source={pet.imageUrl} style={styles.image} resizeMode="cover" />
+      
       <View style={styles.detailsContainer}>
         <View style={styles.nameContainer}>
           <Text style={styles.name}>{pet.name}</Text>
@@ -29,7 +41,7 @@ const PetDetailScreen = () => {
             {pet.status === 'available' ? '🟢 Available' : '🔴 Adopted'}
           </Text>
         </View>
-
+        
         <View style={styles.detailsRow}>
           <Text style={styles.detail}>{pet.breed}</Text>
           <Text style={styles.separator}>•</Text>
@@ -37,14 +49,14 @@ const PetDetailScreen = () => {
           <Text style={styles.separator}>•</Text>
           <Text style={styles.detail}>{pet.gender}</Text>
         </View>
-
+        
         <Text style={styles.sectionTitle}>About {pet.name}</Text>
         <Text style={styles.description}>{pet.description}</Text>
-
+        
         {pet.status === 'available' && (
-          <TouchableOpacity
+          <TouchableOpacity 
             style={styles.adoptButton}
-            onPress={() => navigation.navigate('AdoptionForm', { pet })}
+            onPress={handleAdoptPress}
           >
             <Text style={styles.adoptButtonText}>Adopt {pet.name}</Text>
           </TouchableOpacity>
@@ -57,7 +69,6 @@ const PetDetailScreen = () => {
 const styles = StyleSheet.create({
   container: {
     backgroundColor: 'white',
-    paddingBottom: 30,
   },
   image: {
     width: '100%',
@@ -87,12 +98,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   detail: {
-    marginRight: 5,
+    marginRight: 8,
     color: theme.textLight,
     fontSize: 16,
   },
   separator: {
-    marginRight: 5,
+    marginRight: 8,
     color: theme.textLight,
   },
   sectionTitle: {
@@ -100,7 +111,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginTop: 15,
     marginBottom: 10,
-    color: theme.text,
+    color: theme.primary,
   },
   description: {
     fontSize: 16,
@@ -113,7 +124,7 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 20,
   },
   adoptButtonText: {
     color: 'white',

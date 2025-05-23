@@ -7,7 +7,14 @@ import UserStack from './UserStack';
 import AdminStack from './AdminStack';
 import Loader from '../components/Loader';
 
-const Stack = createNativeStackNavigator();
+export type RootStackParamList = {
+  Welcome: undefined;
+  Login: undefined;
+  UserStack: undefined;
+  AdminStack: undefined;
+};
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const AppNavigator = () => {
   const { user, isLoading } = useAuth();
@@ -17,17 +24,14 @@ const AppNavigator = () => {
   }
 
   return (
-    <Stack.Navigator
-      id={undefined}  // Add this line to fix the error
-      screenOptions={{ headerShown: false }}
-    >
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
       {!user ? (
         <>
           <Stack.Screen name="Welcome" component={WelcomeScreen} />
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="UserStack" component={UserStack} />
         </>
-      ) : user?.isAdmin ? (
+      ) : user.isAdmin ? (
         <Stack.Screen name="AdminStack" component={AdminStack} />
       ) : (
         <Stack.Screen name="UserStack" component={UserStack} />
