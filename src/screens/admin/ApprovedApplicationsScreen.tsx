@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList } from 'react-native';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../firebase/config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { theme } from '../../constants/colors';
 
 interface Application {
   id: string;
   fullName: string;
   petName: string;
-  status: string;
-  reviewedAt: any;
+  status: 'pending' | 'approved' | 'rejected';
+  reviewedAt: Date | null;
+  submittedAt: Date;
 }
 
 const ApprovedApplicationsScreen = () => {
@@ -19,13 +19,25 @@ const ApprovedApplicationsScreen = () => {
   useEffect(() => {
     const fetchApplications = async () => {
       try {
-        const q = query(collection(db, 'applications'), where('status', '==', 'approved'));
-        const querySnapshot = await getDocs(q);
-        const apps: Application[] = [];
-        querySnapshot.forEach((doc) => {
-          apps.push({ id: doc.id, ...doc.data() } as Application);
-        });
-        setApplications(apps);
+        // 1. Get all applications from AsyncStorage
+        const applicationsString = await AsyncStorage.getItem('applications');
+        const allApplications: Application[] = applicationsString 
+          ? JSON.parse(applicationsString) 
+          : [];
+
+        // 2. Filter approved applications
+        const approvedApps = allApplications.filter(
+          app => app.status === 'approved'
+        );
+
+        // 3. Convert string dates back to Date objects
+        const processedApps = approvedApps.map(app => ({
+          ...app,
+          reviewedAt: app.reviewedAt ? new Date(app.reviewedAt) : null,
+          submittedAt: new Date(app.submittedAt)
+        }));
+
+        setApplications(processedApps);
       } catch (error) {
         console.error('Error fetching applications:', error);
       } finally {
@@ -41,7 +53,7 @@ const ApprovedApplicationsScreen = () => {
       <Text style={styles.petName}>Pet: {item.petName}</Text>
       <Text style={styles.applicantName}>Applicant: {item.fullName}</Text>
       <Text style={styles.date}>
-        Approved: {item.reviewedAt?.toDate()?.toLocaleDateString()}
+        Approved: {item.reviewedAt?.toLocaleDateString()}
       </Text>
     </View>
   );
@@ -74,6 +86,7 @@ const ApprovedApplicationsScreen = () => {
   );
 };
 
+// Your existing styles remain unchanged
 const styles = StyleSheet.create({
   container: {
     flex: 1,

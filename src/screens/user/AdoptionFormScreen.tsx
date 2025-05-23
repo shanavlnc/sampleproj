@@ -6,11 +6,11 @@ import * as yup from 'yup';
 import FormInput from '../../components/FormInput';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 import { theme } from '../../constants/colors';
-import { addDoc, collection } from 'firebase/firestore';
-import { db } from '../../firebase/config';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Pet } from '../../types';
 import { StackNavigationProp } from '@react-navigation/stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { v4 as uuidv4 } from 'uuid';
 
 type RootStackParamList = {
   PetDetail: { pet: Pet };
@@ -24,32 +24,31 @@ interface FormData {
   email: string;
   birthdate: string;
   occupation: string;
-  company?: string | undefined;
-  socialMedia?: string | undefined;
+  company?: string;
+  socialMedia?: string;
   maritalStatus: string;
-  alternateContactName?: string | undefined;
-  alternateContactRelationship?: string | undefined;
-  alternateContactPhone?: string | undefined;
-  alternateContactEmail?: string | undefined;
+  alternateContactName?: string;
+  alternateContactRelationship?: string;
+  alternateContactPhone?: string;
+  alternateContactEmail?: string;
   hasAdoptedBefore: boolean;
   householdMembers: string;
-  childrenAges?: string | undefined;
+  childrenAges?: string;
   homeType: string;
   hasYard: boolean;
-  yardFenced?: boolean | undefined;
+  yardFenced?: boolean;
   hoursAlone: string;
   hasOtherPets: boolean;
-  otherPetsInfo?: string | undefined;
+  otherPetsInfo?: string;
   hasVet: boolean;
-  vetInfo?: string | undefined;
+  vetInfo?: string;
   petExperience: string;
   petActivities: string;
   whyAdopt: string;
   agreement: boolean;
 }
 
-// Create a Yup schema that matches FormData exactly
-const schema: yup.ObjectSchema<FormData> = yup.object().shape({
+const schema = yup.object().shape({
   fullName: yup.string().required('Full name is required'),
   address: yup.string().required('Address is required'),
   phone: yup.string()
@@ -138,18 +137,36 @@ const AdoptionFormScreen = () => {
   const route = useRoute();
   const { pet } = route.params as { pet: Pet };
 
+  const hasYard = watch('hasYard');
+  const hasOtherPets = watch('hasOtherPets');
+  const hasVet = watch('hasVet');
+
   const onSubmit: SubmitHandler<FormData> = async (data) => {
     try {
-      await addDoc(collection(db, 'applications'), {
+      // Get existing applications
+      const existingAppsString = await AsyncStorage.getItem('applications');
+      const existingApps = existingAppsString ? JSON.parse(existingAppsString) : [];
+
+      // Create new application
+      const newApplication = {
+        id: uuidv4(),
         ...data,
         petId: pet.id,
         petName: pet.name,
         status: 'pending',
-        createdAt: new Date(),
-      });
+        createdAt: new Date().toISOString(),
+        reviewedAt: null
+      };
+
+      // Save updated applications
+      await AsyncStorage.setItem(
+        'applications',
+        JSON.stringify([...existingApps, newApplication])
+      );
+
       Alert.alert(
         'Application Submitted',
-        'Your adoption application has been submitted successfully. We will review it and get back to you soon.',
+        'Your adoption application has been submitted successfully.',
         [{ text: 'OK', onPress: () => navigation.navigate('Home') }]
       );
     } catch (error) {
@@ -157,10 +174,6 @@ const AdoptionFormScreen = () => {
       Alert.alert('Error', 'Failed to submit application. Please try again.');
     }
   };
-
-  const hasYard = watch('hasYard');
-  const hasOtherPets = watch('hasOtherPets');
-  const hasVet = watch('hasVet');
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -181,7 +194,6 @@ const AdoptionFormScreen = () => {
           />
         )}
       />
-      
       <Controller
         control={control}
         name="address"
@@ -558,7 +570,6 @@ const AdoptionFormScreen = () => {
           />
         )}
       />
-      
       {/* Agreement Section */}
       <View style={styles.switchContainer}>
         <Text style={styles.switchLabel}>

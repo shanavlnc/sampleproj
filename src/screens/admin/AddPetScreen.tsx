@@ -1,11 +1,22 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { collection, addDoc } from 'firebase/firestore';
-import { db, storage } from '../../firebase/config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { theme } from '../../constants/colors';
 import { Ionicons } from '@expo/vector-icons';
+import { v4 as uuidv4 } from 'uuid';
+
+interface Pet {
+  id: string;
+  name: string;
+  breed: string;
+  age: string;
+  gender: string;
+  description: string;
+  imageUri: string;
+  status: 'available' | 'adopted';
+  createdAt: Date;
+}
 
 const AddPetScreen = () => {
   const [name, setName] = useState('');
@@ -13,7 +24,7 @@ const AddPetScreen = () => {
   const [age, setAge] = useState('');
   const [gender, setGender] = useState('');
   const [description, setDescription] = useState('');
-  const [image, setImage] = useState<string | null>(null);
+  const [imageUri, setImageUri] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const pickImage = async () => {
@@ -31,36 +42,34 @@ const AddPetScreen = () => {
     });
 
     if (!result.canceled) {
-      setImage(result.assets[0].uri);
+      setImageUri(result.assets[0].uri);
     }
   };
 
   const handleSubmit = async () => {
-    if (!name || !breed || !age || !gender || !description || !image) {
+    if (!name || !breed || !age || !gender || !description || !imageUri) {
       Alert.alert('Error', 'Please fill in all fields and select an image');
       return;
     }
 
     setIsLoading(true);
     try {
-      // Upload image to Firebase Storage
-      const response = await fetch(image);
-      const blob = await response.blob();
-      const storageRef = ref(storage, `pet-images/${Date.now()}`);
-      await uploadBytes(storageRef, blob);
-      const imageUrl = await getDownloadURL(storageRef);
+      const existingPetsString = await AsyncStorage.getItem('pets');
+      const existingPets: Pet[] = existingPetsString ? JSON.parse(existingPetsString) : [];
 
-      // Save pet data to Firestore
-      await addDoc(collection(db, 'pets'), {
+      const newPet: Pet = {
+        id: uuidv4(),
         name,
         breed,
         age,
         gender,
         description,
-        imageUrl,
+        imageUri,
         status: 'available',
-        createdAt: new Date(),
-      });
+        createdAt: new Date()
+      };
+
+      await AsyncStorage.setItem('pets', JSON.stringify([...existingPets, newPet]));
 
       Alert.alert('Success', 'Pet added successfully');
       setName('');
@@ -68,7 +77,7 @@ const AddPetScreen = () => {
       setAge('');
       setGender('');
       setDescription('');
-      setImage(null);
+      setImageUri(null);
     } catch (error) {
       console.error('Error adding pet:', error);
       Alert.alert('Error', 'Failed to add pet');
@@ -82,8 +91,8 @@ const AddPetScreen = () => {
       <Text style={styles.title}>Add New Pet</Text>
       
       <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
-        {image ? (
-          <Image source={{ uri: image }} style={styles.image} />
+        {imageUri ? (
+          <Image source={{ uri: imageUri }} style={styles.image} />
         ) : (
           <View style={styles.imagePlaceholder}>
             <Ionicons name="camera-outline" size={40} color={theme.textLight} />
@@ -108,7 +117,7 @@ const AddPetScreen = () => {
       
       <TextInput
         style={styles.input}
-        placeholder="Age"
+        placeholder="Age (e.g., 2 years)"
         value={age}
         onChangeText={setAge}
       />

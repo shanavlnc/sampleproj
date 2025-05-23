@@ -27,7 +27,7 @@ const AppNavigator = () => {
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="UserStack" component={UserStack} />
         </>
-      ) : user.email?.endsWith('@shelter.com') ? (
+      ) : user?.isAdmin ? (
         <Stack.Screen name="AdminStack" component={AdminStack} />
       ) : (
         <Stack.Screen name="UserStack" component={UserStack} />

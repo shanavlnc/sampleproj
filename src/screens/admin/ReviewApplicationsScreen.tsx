@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
-import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
-import { db } from '../../firebase/config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { theme } from '../../constants/colors';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -9,8 +8,9 @@ interface Application {
   id: string;
   fullName: string;
   petName: string;
-  status: string;
-  createdAt: any;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: Date;
+  reviewedAt?: Date;
 }
 
 const ReviewApplicationsScreen = () => {
@@ -20,13 +20,25 @@ const ReviewApplicationsScreen = () => {
   useEffect(() => {
     const fetchApplications = async () => {
       try {
-        const q = query(collection(db, 'applications'), where('status', '==', 'pending'));
-        const querySnapshot = await getDocs(q);
-        const apps: Application[] = [];
-        querySnapshot.forEach((doc) => {
-          apps.push({ id: doc.id, ...doc.data() } as Application);
-        });
-        setApplications(apps);
+        // 1. Get all applications from AsyncStorage
+        const applicationsString = await AsyncStorage.getItem('applications');
+        const allApplications: Application[] = applicationsString 
+          ? JSON.parse(applicationsString) 
+          : [];
+
+        // 2. Filter pending applications
+        const pendingApps = allApplications.filter(
+          app => app.status === 'pending'
+        );
+
+        // 3. Convert string dates back to Date objects
+        const processedApps = pendingApps.map(app => ({
+          ...app,
+          createdAt: new Date(app.createdAt),
+          reviewedAt: app.reviewedAt ? new Date(app.reviewedAt) : undefined
+        }));
+
+        setApplications(processedApps);
       } catch (error) {
         console.error('Error fetching applications:', error);
       } finally {
@@ -39,11 +51,30 @@ const ReviewApplicationsScreen = () => {
 
   const handleDecision = async (appId: string, decision: 'approved' | 'rejected') => {
     try {
-      await updateDoc(doc(db, 'applications', appId), {
-        status: decision,
-        reviewedAt: new Date(),
+      // 1. Get current applications
+      const applicationsString = await AsyncStorage.getItem('applications');
+      let allApplications: Application[] = applicationsString 
+        ? JSON.parse(applicationsString) 
+        : [];
+
+      // 2. Update the specific application
+      allApplications = allApplications.map(app => {
+        if (app.id === appId) {
+          return {
+            ...app,
+            status: decision,
+            reviewedAt: new Date()
+          };
+        }
+        return app;
       });
+
+      // 3. Save back to AsyncStorage
+      await AsyncStorage.setItem('applications', JSON.stringify(allApplications));
+
+      // 4. Update UI state
       setApplications(applications.filter(app => app.id !== appId));
+      
       Alert.alert('Success', `Application ${decision}`);
     } catch (error) {
       console.error('Error updating application:', error);
@@ -56,7 +87,7 @@ const ReviewApplicationsScreen = () => {
       <Text style={styles.petName}>Pet: {item.petName}</Text>
       <Text style={styles.applicantName}>Applicant: {item.fullName}</Text>
       <Text style={styles.date}>
-        Applied: {item.createdAt?.toDate()?.toLocaleDateString()}
+        Applied: {item.createdAt.toLocaleDateString()}
       </Text>
       
       <View style={styles.buttonsContainer}>
@@ -107,6 +138,7 @@ const ReviewApplicationsScreen = () => {
   );
 };
 
+// Your existing styles remain unchanged
 const styles = StyleSheet.create({
   container: {
     flex: 1,
