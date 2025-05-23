@@ -20,7 +20,7 @@ type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
 const HomeScreen = () => {
   const [pets] = useState(placeholderPets.filter(pet => pet.status === 'available'));
   const [swipedAll, setSwipedAll] = useState(false);
-  const swiperRef = useRef<Swiper<Pet>>(null);
+  const swiperRef = useRef<any>(null); // Using any as temporary workaround
   const navigation = useNavigation<HomeScreenNavigationProp>();
 
   const onSwipedLeft = (cardIndex: number) => {
@@ -52,7 +52,7 @@ const HomeScreen = () => {
   };
 
   const showDetails = () => {
-    const currentIndex = swiperRef.current?.state.firstCardIndex;
+    const currentIndex = swiperRef.current?.state?.firstCardIndex;
     if (currentIndex !== undefined && currentIndex < pets.length) {
       navigation.navigate('PetDetail', { pet: pets[currentIndex] });
     }
@@ -75,12 +75,13 @@ const HomeScreen = () => {
             verticalSwipe={false}
             overlayLabels={{
               left: {
-                title: 'NOPE',
+                title: <Text style={styles.overlayLabelText}>NOPE</Text>,
                 style: {
                   label: {
                     backgroundColor: theme.secondary,
                     borderColor: theme.secondary,
                     borderWidth: 1,
+                    padding: 10,
                   },
                   wrapper: {
                     flexDirection: 'column',
@@ -92,12 +93,13 @@ const HomeScreen = () => {
                 },
               },
               right: {
-                title: 'LIKE',
+                title: <Text style={styles.overlayLabelText}>LIKE</Text>,
                 style: {
                   label: {
                     backgroundColor: theme.primary,
                     borderColor: theme.primary,
                     borderWidth: 1,
+                    padding: 10,
                   },
                   wrapper: {
                     flexDirection: 'column',
@@ -149,6 +151,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     color: theme.textLight,
+  },
+  overlayLabelText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: 'white',
   },
 });
 

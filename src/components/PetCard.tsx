@@ -1,55 +1,99 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Image, StyleSheet, Dimensions, ImageSourcePropType } from 'react-native';
 import { Pet } from '../types';
-import { useTheme } from '../context/ThemeContext'; // This import should now work
+import { theme } from '../constants/colors';
+
+const { width } = Dimensions.get('window');
 
 interface PetCardProps {
   pet: Pet;
-  onPress?: () => void;
 }
 
-const PetCard: React.FC<PetCardProps> = ({ pet, onPress }) => {
-  const theme = useTheme(); // Now properly imported
+const PetCard: React.FC<PetCardProps> = ({ pet }) => {
+  // Convert the imageUrl string to the correct type
+  const imageSource: ImageSourcePropType = typeof pet.imageUrl === 'string' 
+    ? { uri: pet.imageUrl } 
+    : pet.imageUrl;
 
   return (
-    <TouchableOpacity 
-      style={[styles.container, { backgroundColor: theme.colors.card }]}
-      onPress={onPress}
-    >
-      <Image 
-        source={typeof pet.image === 'string' ? { uri: pet.image } : pet.image}
-        style={styles.image}
-        resizeMode="cover"
-      />
-      <View style={styles.details}>
-        <Text style={[styles.name, { color: theme.colors.primary }]}>{pet.name}</Text>
-        <Text style={[styles.text, { color: theme.colors.text }]}>{pet.breed}, {pet.age}</Text>
+    <View style={styles.card}>
+      <Image source={imageSource} style={styles.image} resizeMode="cover" />
+      <View style={styles.infoContainer}>
+        <View style={styles.nameContainer}>
+          <Text style={styles.name}>{pet.name}</Text>
+          <Text style={styles.status}>{pet.status === 'available' ? '🟢 Available' : '🔴 Adopted'}</Text>
+        </View>
+        <View style={styles.detailsRow}>
+          <Text style={styles.detail}>{pet.breed}</Text>
+          <Text style={styles.separator}>•</Text>
+          <Text style={styles.detail}>{pet.age}</Text>
+          <Text style={styles.separator}>•</Text>
+          <Text style={styles.detail}>{pet.gender}</Text>
+        </View>
+        <Text style={styles.description} numberOfLines={3}>
+          {pet.description}
+        </Text>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    borderRadius: 8,
-    overflow: 'hidden',
-    marginBottom: 16,
+  card: {
+    flex: 1,
+    borderRadius: 15,
+    backgroundColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    marginHorizontal: 10
   },
   image: {
     width: '100%',
-    height: 200,
+    height: '70%',
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 15
   },
-  details: {
-    padding: 12,
+  infoContainer: {
+    padding: 15,
+    height: '30%'
+  },
+  nameContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 5
   },
   name: {
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: 'bold',
+    color: theme.text
   },
-  text: {
+  status: {
     fontSize: 14,
-    marginTop: 4,
+    color: theme.textLight
   },
+  detailsRow: {
+    flexDirection: 'row',
+    marginBottom: 10,
+    alignItems: 'center'
+  },
+  detail: {
+    marginRight: 5,
+    color: theme.textLight,
+    fontSize: 14
+  },
+  separator: {
+    marginRight: 5,
+    color: theme.textLight
+  },
+  description: {
+    color: theme.text,
+    fontSize: 14,
+    lineHeight: 20
+  }
 });
 
 export default PetCard;

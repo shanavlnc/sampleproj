@@ -1,60 +1,42 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { User } from '../types';
+import { auth } from '../firebase/config';
+import { onAuthStateChanged, User, signOut as firebaseSignOut } from 'firebase/auth';
 
 interface AuthContextType {
   user: User | null;
-  loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (data: { email: string; password: string; name: string }) => Promise<void>;
-  logout: () => Promise<void>;
+  isLoading: boolean;
+  signOut: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType>({} as AuthContextType);
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  isLoading: true,
+  signOut: async () => {}
+});
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const loadUser = async () => {
-      const storedUser = await AsyncStorage.getItem('@user');
-      if (storedUser) setUser(JSON.parse(storedUser));
-      setLoading(false);
-    };
-    loadUser();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      setIsLoading(false);
+    });
+
+    return unsubscribe;
   }, []);
 
-  const login = async (email: string, password: string) => {
-    // Mock authentication with proper role typing
-    const mockUser: User = {
-      id: Math.random().toString(),
-      email,
-      name: email.split('@')[0],
-      role: email === 'admin@adoptpaw.com' ? 'admin' : 'user' // Explicitly typed
-    };
-    await AsyncStorage.setItem('@user', JSON.stringify(mockUser));
-    setUser(mockUser);
-  };
-
-  const register = async (data: { email: string; password: string; name: string }) => {
-    const newUser: User = {
-      id: Math.random().toString(),
-      email: data.email,
-      name: data.name,
-      role: 'user' // All new registrations are regular users
-    };
-    await AsyncStorage.setItem('@user', JSON.stringify(newUser));
-    setUser(newUser);
-  };
-
-  const logout = async () => {
-    await AsyncStorage.removeItem('@user');
-    setUser(null);
+  const signOut = async () => {
+    try {
+      await firebaseSignOut(auth);
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, signOut }}>
       {children}
     </AuthContext.Provider>
   );

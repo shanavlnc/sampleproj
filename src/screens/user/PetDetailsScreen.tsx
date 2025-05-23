@@ -1,100 +1,124 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { useTheme } from '../../context/ThemeContext';
+import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useAuth } from '../../context/AuthContext';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../../types';
-import { RouteProp } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Pet } from '../../types';
+import { theme } from '../../constants/colors';
 
-// Define route params type
-type PetDetailRouteProp = RouteProp<RootStackParamList, 'PetDetail'>;
+// Define the navigation stack types
+type RootStackParamList = {
+  PetDetail: { pet: Pet };
+  AdoptionForm: { pet: Pet };
+};
 
-// Define navigation prop type
-type PetDetailNavigationProp = StackNavigationProp<RootStackParamList, 'PetDetail'>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const PetDetailScreen = () => {
-  const theme = useTheme();
-  const route = useRoute<PetDetailRouteProp>();
-  const { pet } = route.params;
-  const navigation = useNavigation<PetDetailNavigationProp>();
-  const { user } = useAuth();
-
-  const handleAdopt = () => {
-    if (!user) {
-      Alert.alert(
-        'Login Required',
-        'You need to login to adopt this pet',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Login', onPress: () => navigation.navigate('Login') }
-        ]
-      );
-      return;
-    }
-    navigation.navigate('ApplicationForm', { petId: pet.id });
-  };
+  const navigation = useNavigation<NavigationProp>();
+  const route = useRoute();
+  const { pet } = route.params as { pet: Pet };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Image 
-        source={typeof pet.image === 'string' ? { uri: pet.image } : pet.image} 
-        style={styles.image}
-        resizeMode="cover"
-      />
-      <View style={styles.details}>
-        <Text style={[styles.name, { color: theme.colors.primary }]}>{pet.name}</Text>
-        <Text style={[styles.text, { color: theme.colors.text }]}>{pet.breed}</Text>
-        <Text style={[styles.text, { color: theme.colors.text }]}>{pet.age}</Text>
-        <Text style={[styles.description, { color: theme.colors.text }]}>
-          {pet.description || 'No description available'}
-        </Text>
+    <ScrollView contentContainerStyle={styles.container}>
+      <Image source={{ uri: pet.imageUrl }} style={styles.image} resizeMode="cover" />
+
+      <View style={styles.detailsContainer}>
+        <View style={styles.nameContainer}>
+          <Text style={styles.name}>{pet.name}</Text>
+          <Text style={styles.status}>
+            {pet.status === 'available' ? '🟢 Available' : '🔴 Adopted'}
+          </Text>
+        </View>
+
+        <View style={styles.detailsRow}>
+          <Text style={styles.detail}>{pet.breed}</Text>
+          <Text style={styles.separator}>•</Text>
+          <Text style={styles.detail}>{pet.age}</Text>
+          <Text style={styles.separator}>•</Text>
+          <Text style={styles.detail}>{pet.gender}</Text>
+        </View>
+
+        <Text style={styles.sectionTitle}>About {pet.name}</Text>
+        <Text style={styles.description}>{pet.description}</Text>
+
+        {pet.status === 'available' && (
+          <TouchableOpacity
+            style={styles.adoptButton}
+            onPress={() => navigation.navigate('AdoptionForm', { pet })}
+          >
+            <Text style={styles.adoptButtonText}>Adopt {pet.name}</Text>
+          </TouchableOpacity>
+        )}
       </View>
-      <TouchableOpacity
-        style={[styles.button, { backgroundColor: theme.colors.primary }]}
-        onPress={handleAdopt}
-      >
-        <Text style={styles.buttonText}>Adopt Me</Text>
-      </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    backgroundColor: 'white',
+    paddingBottom: 30,
   },
   image: {
     width: '100%',
-    height: 300,
+    height: 350,
   },
-  details: {
+  detailsContainer: {
     padding: 20,
   },
-  name: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 8,
+  nameContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
   },
-  text: {
+  name: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: theme.text,
+  },
+  status: {
     fontSize: 16,
-    marginBottom: 4,
+    color: theme.textLight,
+  },
+  detailsRow: {
+    flexDirection: 'row',
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  detail: {
+    marginRight: 5,
+    color: theme.textLight,
+    fontSize: 16,
+  },
+  separator: {
+    marginRight: 5,
+    color: theme.textLight,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 15,
+    marginBottom: 10,
+    color: theme.text,
   },
   description: {
     fontSize: 16,
-    marginTop: 16,
     lineHeight: 24,
+    color: theme.text,
+    marginBottom: 30,
   },
-  button: {
-    margin: 20,
+  adoptButton: {
+    backgroundColor: theme.primary,
     padding: 15,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
+    marginTop: 10,
   },
-  buttonText: {
+  adoptButtonText: {
     color: 'white',
+    fontSize: 18,
     fontWeight: 'bold',
-    fontSize: 16,
   },
 });
 
