@@ -8,14 +8,14 @@ import SwipeButtons from '../../components/SwipeButtons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Pet, UserStackParamList } from '../../types'; // Changed to UserStackParamList
+import { Pet, UserStackParamList } from '../../types';
 
-// Update to use UserStackParamList since PetDetail is in the user stack
 type HomeScreenNavigationProp = NativeStackNavigationProp<UserStackParamList, 'Home'>;
 
 const HomeScreen = () => {
   const [pets, setPets] = useState(placeholderPets.filter(pet => pet.status === 'available'));
   const [swipedAll, setSwipedAll] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const swiperRef = useRef<Swiper<Pet>>(null);
   const navigation = useNavigation<HomeScreenNavigationProp>();
 
@@ -38,6 +38,10 @@ const HomeScreen = () => {
     }
   };
 
+  const onSwiped = (cardIndex: number) => {
+    setCurrentIndex(cardIndex + 1);
+  };
+
   return (
     <View style={styles.container}>
       {pets.length > 0 ? (
@@ -48,6 +52,7 @@ const HomeScreen = () => {
             renderCard={(pet) => <PetCard pet={pet} />}
             onSwipedLeft={onSwipedLeft}
             onSwipedRight={onSwipedRight}
+            onSwiped={onSwiped}
             backgroundColor="white"
             stackSize={3}
             verticalSwipe={false}
@@ -94,11 +99,8 @@ const HomeScreen = () => {
             onPressLeft={() => swiperRef.current?.swipeLeft()}
             onPressRight={() => swiperRef.current?.swipeRight()}
             onPressInfo={() => {
-              if (swiperRef.current) {
-                const currentIndex = swiperRef.current.state.firstCardIndex;
-                if (currentIndex < pets.length) {
-                  navigation.navigate('PetDetail', { pet: pets[currentIndex] });
-                }
+              if (currentIndex < pets.length) {
+                navigation.navigate('PetDetail', { pet: pets[currentIndex] });
               }
             }}
           />
