@@ -1,9 +1,7 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, Image, StyleSheet } from 'react-native';
 import { Pet } from '../types';
 import { theme } from '../constants/colors';
-
-const { width } = Dimensions.get('window');
 
 interface PetCardProps {
   pet: Pet;
@@ -11,22 +9,14 @@ interface PetCardProps {
 
 const PetCard: React.FC<PetCardProps> = ({ pet }) => {
   return (
-    <View style={styles.card}>
+    <View style={styles.container}>
       <Image source={pet.imageUrl} style={styles.image} resizeMode="cover" />
       <View style={styles.infoContainer}>
-        <View style={styles.nameContainer}>
-          <Text style={styles.name}>{pet.name}</Text>
-          <Text style={styles.status}>{pet.status === 'available' ? '🟢 Available' : '🔴 Adopted'}</Text>
-        </View>
-        <View style={styles.detailsRow}>
-          <Text style={styles.detail}>{pet.breed}</Text>
-          <Text style={styles.separator}>•</Text>
-          <Text style={styles.detail}>{pet.age}</Text>
-          <Text style={styles.separator}>•</Text>
-          <Text style={styles.detail}>{pet.gender}</Text>
-        </View>
-        <Text style={styles.description} numberOfLines={3}>
-          {pet.description}
+        <Text style={styles.name}>{pet.name}</Text>
+        <Text style={styles.details}>{pet.breed} • {pet.age} • {pet.gender}</Text>
+        <Text style={styles.description}>{pet.description}</Text>
+        <Text style={styles.status}>
+          {pet.status === 'available' ? '🟢 Available' : '🔴 Adopted'}
         </Text>
       </View>
     </View>
@@ -34,61 +24,45 @@ const PetCard: React.FC<PetCardProps> = ({ pet }) => {
 };
 
 const styles = StyleSheet.create({
-  card: {
-    flex: 1,
-    borderRadius: 15,
+  container: {
     backgroundColor: 'white',
+    borderRadius: 10,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-    marginHorizontal: 10
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    height: '100%',
   },
   image: {
     width: '100%',
-    height: '70%',
-    borderTopLeftRadius: 15,
-    borderTopRightRadius: 15
+    height: '60%',
   },
   infoContainer: {
     padding: 15,
-    height: '30%'
-  },
-  nameContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 5
   },
   name: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
-    color: theme.text
+    color: theme.text,
+    marginBottom: 5,
+  },
+  details: {
+    fontSize: 16,
+    color: theme.textLight,
+    marginBottom: 10,
+  },
+  description: {
+    fontSize: 14,
+    color: theme.text,
+    marginBottom: 10,
   },
   status: {
     fontSize: 14,
-    color: theme.textLight
-  },
-  detailsRow: {
-    flexDirection: 'row',
-    marginBottom: 10,
-    alignItems: 'center'
-  },
-  detail: {
-    marginRight: 5,
+    fontWeight: 'bold',
     color: theme.textLight,
-    fontSize: 14
   },
-  separator: {
-    marginRight: 5,
-    color: theme.textLight
-  },
-  description: {
-    color: theme.text,
-    fontSize: 14,
-    lineHeight: 20
-  }
 });
 
 export default PetCard;

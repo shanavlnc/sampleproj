@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import Swiper from 'react-native-deck-swiper';
+import { View, Text, StyleSheet, PanResponder, Animated } from 'react-native';
 import { placeholderPets } from '../../constants/pets';
 import { theme } from '../../constants/colors';
 import PetCard from '../../components/PetCard';
@@ -14,17 +13,34 @@ type HomeScreenNavigationProp = NativeStackNavigationProp<UserStackParamList, 'H
 
 const HomeScreen = () => {
   const [pets, setPets] = useState(placeholderPets.filter(pet => pet.status === 'available'));
-  const [swipedAll, setSwipedAll] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const swiperRef = useRef<Swiper<Pet>>(null);
+  const position = useRef(new Animated.ValueXY()).current;
   const navigation = useNavigation<HomeScreenNavigationProp>();
 
-  const onSwipedLeft = (cardIndex: number) => {
-    console.log(`Swiped left on ${pets[cardIndex].name}`);
-  };
+  const panResponder = PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onPanResponderMove: (_, gesture) => {
+      position.setValue({ x: gesture.dx, y: 0 });
+    },
+    onPanResponderRelease: (_, gesture) => {
+      if (gesture.dx > 120) {
+        // Swiped right
+        handleSwipeRight();
+      } else if (gesture.dx < -120) {
+        // Swiped left
+        handleSwipeLeft();
+      } else {
+        // Return to center
+        Animated.spring(position, {
+          toValue: { x: 0, y: 0 },
+          useNativeDriver: true
+        }).start();
+      }
+    }
+  });
 
-  const onSwipedRight = async (cardIndex: number) => {
-    const pet = pets[cardIndex];
+  const handleSwipeRight = async () => {
+    const pet = pets[currentIndex];
     try {
       const savedPets = await AsyncStorage.getItem('savedPets');
       let updatedSavedPets = savedPets ? JSON.parse(savedPets) : [];
@@ -36,72 +52,53 @@ const HomeScreen = () => {
     } catch (error) {
       console.error('Error saving pet:', error);
     }
+    goToNextPet();
   };
 
-  const onSwiped = (cardIndex: number) => {
-    setCurrentIndex(cardIndex + 1);
+  const handleSwipeLeft = () => {
+    console.log(`Swiped left on ${pets[currentIndex].name}`);
+    goToNextPet();
+  };
+
+  const goToNextPet = () => {
+    Animated.spring(position, {
+      toValue: { x: 0, y: 0 },
+      useNativeDriver: true
+    }).start(() => {
+      setCurrentIndex(prev => (prev + 1) % pets.length);
+    });
   };
 
   return (
     <View style={styles.container}>
       {pets.length > 0 ? (
         <>
-          <Swiper
-            ref={swiperRef}
-            cards={pets}
-            renderCard={(pet) => <PetCard pet={pet} />}
-            onSwipedLeft={onSwipedLeft}
-            onSwipedRight={onSwipedRight}
-            onSwiped={onSwiped}
-            backgroundColor="white"
-            stackSize={3}
-            verticalSwipe={false}
-            overlayLabels={{
-              left: {
-                title: 'NOPE',
-                style: {
-                  label: {
-                    backgroundColor: theme.secondary,
-                    borderColor: theme.secondary,
-                    color: 'white',
-                    borderWidth: 1,
-                  },
-                  wrapper: {
-                    flexDirection: 'column',
-                    alignItems: 'flex-end',
-                    justifyContent: 'flex-start',
-                    marginTop: 30,
-                    marginLeft: -30,
-                  },
-                },
-              },
-              right: {
-                title: 'LIKE',
-                style: {
-                  label: {
-                    backgroundColor: theme.primary,
-                    borderColor: theme.primary,
-                    color: 'white',
-                    borderWidth: 1,
-                  },
-                  wrapper: {
-                    flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    justifyContent: 'flex-start',
-                    marginTop: 30,
-                    marginLeft: 30,
-                  },
-                },
-              },
-            }}
-          />
-          <SwipeButtons
-            onPressLeft={() => swiperRef.current?.swipeLeft()}
-            onPressRight={() => swiperRef.current?.swipeRight()}
-            onPressInfo={() => {
-              if (currentIndex < pets.length) {
-                navigation.navigate('PetDetail', { pet: pets[currentIndex] });
+          <Animated.View
+            style={[
+              styles.cardContainer,
+              {
+                transform: [
+                  { translateX: position.x },
+                  { translateY: position.y },
+                  {
+                    rotate: position.x.interpolate({
+                      inputRange: [-200, 0, 200],
+                      outputRange: ['-30deg', '0deg', '30deg']
+                    })
+                  }
+                ]
               }
+            ]}
+            {...panResponder.panHandlers}
+          >
+            <PetCard pet={pets[currentIndex]} />
+          </Animated.View>
+          
+          <SwipeButtons
+            onPressLeft={handleSwipeLeft}
+            onPressRight={handleSwipeRight}
+            onPressInfo={() => {
+              navigation.navigate('PetDetail', { pet: pets[currentIndex] });
             }}
           />
         </>
@@ -118,6 +115,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'white',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardContainer: {
+    width: '90%',
+    height: '60%',
+    position: 'absolute',
+    top: '10%',
   },
   noPetsContainer: {
     flex: 1,
