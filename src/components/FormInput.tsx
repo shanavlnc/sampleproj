@@ -12,6 +12,11 @@ interface FormInputProps {
   multiline?: boolean;
   numberOfLines?: number;
   isSwitch?: boolean;
+  placeholder?: string; // Add this
+  editable?: boolean; // Add this
+  keyboardType?: string; // Add this
+  autoCapitalize?: string; // Add this
+  pointerEvents?: 'auto' | 'none' | 'box-none' | 'box-only'; // Add this
 }
 
 const FormInput: React.FC<FormInputProps> = ({

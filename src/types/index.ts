@@ -41,11 +41,14 @@ export type RootStackParamList = {
   PetDetail: { pet: Pet };
 };
 
+// Update the AdminStackParamList in your types file
 export type AdminStackParamList = {
   AdminHome: undefined;
   AddPet: undefined;
+  PetManagement: undefined; // Add this
   ReviewApplications: undefined;
   ApprovedApplications: undefined;
+  RemovedPets: undefined; // Add this
 };
 
 export type UserStackParamList = {

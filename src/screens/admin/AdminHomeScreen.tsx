@@ -7,7 +7,6 @@ import { useAuth } from '../../context/AuthContext';
 import { AdminStackParamList } from '../../types/index';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-// Define navigation prop type
 type AdminHomeScreenNavigationProp = NativeStackNavigationProp<
   AdminStackParamList,
   'AdminHome'
@@ -20,8 +19,9 @@ const AdminHomeScreen = () => {
   type MenuItem = {
     id: string;
     title: string;
-    icon: 'add-circle-outline' | 'document-text-outline' | 'checkmark-done-outline';
-    screen: keyof Omit<AdminStackParamList, 'AdminHome'>;
+    icon: 'add-circle-outline' | 'document-text-outline' | 'checkmark-done-outline' | 'paw-outline' | 'trash-outline';
+    screen: keyof AdminStackParamList; // Now matches all possible screens
+    description: string;
   };
 
   const menuItems: MenuItem[] = [
@@ -30,18 +30,35 @@ const AdminHomeScreen = () => {
       title: 'Add New Pet',
       icon: 'add-circle-outline',
       screen: 'AddPet',
+      description: 'Register new pets available for adoption'
     },
     {
       id: '2',
-      title: 'Review Applications',
-      icon: 'document-text-outline',
-      screen: 'ReviewApplications',
+      title: 'Manage Pets',
+      icon: 'paw-outline',
+      screen: 'PetManagement',
+      description: 'View, edit or remove pets from the system'
     },
     {
       id: '3',
+      title: 'Review Applications',
+      icon: 'document-text-outline',
+      screen: 'ReviewApplications',
+      description: 'Process pending adoption applications'
+    },
+    {
+      id: '4',
       title: 'Approved Applications',
       icon: 'checkmark-done-outline',
       screen: 'ApprovedApplications',
+      description: 'View approved adoption records'
+    },
+    {
+      id: '5',
+      title: 'Removed Pets Archive',
+      icon: 'trash-outline',
+      screen: 'RemovedPets',
+      description: 'View archive of removed pets'
     },
   ];
 
@@ -62,11 +79,19 @@ const AdminHomeScreen = () => {
             style={styles.menuItem} 
             onPress={() => navigation.navigate(item.screen)}
           >
-            <Ionicons name={item.icon} size={24} color={theme.primary} />
-            <Text style={styles.menuItemText}>{item.title}</Text>
-            <Ionicons name="chevron-forward" size={20} color="#999" />
+            <View style={styles.menuItemContent}>
+              <View style={styles.iconContainer}>
+                <Ionicons name={item.icon} size={24} color={theme.primary} />
+              </View>
+              <View style={styles.textContainer}>
+                <Text style={styles.menuItemText}>{item.title}</Text>
+                <Text style={styles.menuItemDescription}>{item.description}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#999" />
+            </View>
           </TouchableOpacity>
         )}
+        contentContainerStyle={styles.listContent}
       />
     </View>
   );
@@ -89,11 +114,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: theme.text,
   },
+  listContent: {
+    paddingBottom: 20,
+  },
   menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: 'white',
-    padding: 20,
     borderRadius: 10,
     marginBottom: 15,
     shadowColor: '#000',
@@ -102,11 +127,26 @@ const styles = StyleSheet.create({
     shadowRadius: 1.41,
     elevation: 2,
   },
-  menuItemText: {
+  menuItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+  },
+  iconContainer: {
+    marginRight: 15,
+  },
+  textContainer: {
     flex: 1,
-    marginLeft: 15,
+  },
+  menuItemText: {
     fontSize: 16,
+    fontWeight: '600',
     color: theme.text,
+    marginBottom: 4,
+  },
+  menuItemDescription: {
+    fontSize: 14,
+    color: theme.textLight,
   },
 });
 
