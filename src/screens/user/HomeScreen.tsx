@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, PanResponder, Animated } from 'react-native';
+import { View, Text, StyleSheet, PanResponder, Animated, Alert } from 'react-native';
 import { placeholderPets } from '../../constants/pets';
 import { theme } from '../../constants/colors';
 import PetCard from '../../components/PetCard';
@@ -23,17 +23,13 @@ const HomeScreen = () => {
       position.setValue({ x: gesture.dx, y: 0 });
     },
     onPanResponderRelease: (_, gesture) => {
-      if (gesture.dx > 120) {
-        // Swiped right
-        handleSwipeRight();
-      } else if (gesture.dx < -120) {
-        // Swiped left
-        handleSwipeLeft();
+      if (Math.abs(gesture.dx) > 50) {
+        gesture.dx > 0 ? handleSwipeRight() : handleSwipeLeft();
       } else {
-        // Return to center
         Animated.spring(position, {
           toValue: { x: 0, y: 0 },
-          useNativeDriver: true
+          useNativeDriver: true,
+          speed: 20,
         }).start();
       }
     }
@@ -48,6 +44,7 @@ const HomeScreen = () => {
       if (!updatedSavedPets.some((p: Pet) => p.id === pet.id)) {
         updatedSavedPets.push(pet);
         await AsyncStorage.setItem('savedPets', JSON.stringify(updatedSavedPets));
+        Alert.alert('Saved!', `${pet.name} added to your favorites`);
       }
     } catch (error) {
       console.error('Error saving pet:', error);
@@ -56,7 +53,6 @@ const HomeScreen = () => {
   };
 
   const handleSwipeLeft = () => {
-    console.log(`Swiped left on ${pets[currentIndex].name}`);
     goToNextPet();
   };
 

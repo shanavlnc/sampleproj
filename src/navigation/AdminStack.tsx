@@ -5,19 +5,21 @@ import AdminHomeScreen from '../screens/admin/AdminHomeScreen';
 import AddPetScreen from '../screens/admin/AddPetScreen';
 import ReviewApplicationsScreen from '../screens/admin/ReviewApplicationsScreen';
 import ApprovedApplicationsScreen from '../screens/admin/ApprovedApplicationsScreen';
+import PetManagementScreen from '../screens/admin/PetManagementScreen';
 
 export type AdminStackParamList = {
   AdminHome: undefined;
   AddPet: undefined;
   ReviewApplications: undefined;
   ApprovedApplications: undefined;
+  PetManagement: undefined; // Add this line
 };
 
 const Stack = createNativeStackNavigator<AdminStackParamList>();
 
 const AdminStack = () => (
   <Stack.Navigator
-    id="AdminStack" // Now this will work correctly
+    id="AdminStack"
     screenOptions={{
       headerStyle: {
         backgroundColor: theme.primary,
@@ -48,6 +50,11 @@ const AdminStack = () => (
       name="ApprovedApplications" 
       component={ApprovedApplicationsScreen}
       options={{ title: 'Approved Applications' }}
+    />
+    <Stack.Screen 
+      name="PetManagement" 
+      component={PetManagementScreen}
+      options={{ title: 'Manage Pets' }}
     />
   </Stack.Navigator>
 );
