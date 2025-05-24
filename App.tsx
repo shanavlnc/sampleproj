@@ -1,6 +1,7 @@
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { ThemeProvider } from 'styled-components/native';
+import { NavigationContainer } from '@react-navigation/native'; // <-- Add this
 import { AuthProvider } from './src/context/AuthContext';
 import { ApplicationProvider } from './src/context/ApplicationContext';
 import AppNavigator from './src/navigation/AppNavigator';
@@ -11,8 +12,10 @@ export default function App() {
     <ThemeProvider theme={theme}>
       <AuthProvider>
         <ApplicationProvider>
-          <StatusBar style="auto" />
-          <AppNavigator />
+          <NavigationContainer> {/* Wrap AppNavigator with this */}
+            <StatusBar style="auto" />
+            <AppNavigator />
+          </NavigationContainer>
         </ApplicationProvider>
       </AuthProvider>
     </ThemeProvider>
