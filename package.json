@@ -4,6 +4,7 @@
     "@hookform/resolvers": "^5.0.1",
     "@react-native-async-storage/async-storage": "^1.23.1",
     "@react-native-community/datetimepicker": "^8.3.0",
+    "@react-native-picker/picker": "^2.11.0",
     "@react-navigation/bottom-tabs": "6.x",
     "@react-navigation/native": "6.x",
     "@react-navigation/native-stack": "^6.11.0",
