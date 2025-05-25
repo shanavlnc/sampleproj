@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Alert, TouchableOpacity, Platform, Switch } from 'react-native';
-import { useForm, Controller } from 'react-hook-form';
+import { View, Text, ScrollView, StyleSheet, Alert, TouchableOpacity, Platform, TextInput, Switch } from 'react-native';
+import { useForm, Controller, SubmitHandler } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import FormInput from '../../components/FormInput';
 import { theme } from '../../constants/colors';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -11,57 +10,100 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import RadioGroup, { RadioButtonProps } from 'react-native-radio-buttons-group';
+
+interface FormValues {
+  fullName: string;
+  address: string;
+  phone: string;
+  email: string;
+  birthdate: Date;
+  occupation: string;
+  hasAdoptedBefore: string;
+  householdMembers: string;
+  homeType: string;
+  hoursAlone: string;
+  hasOtherPets: string;
+  petExperience: string;
+  whyAdopt: string;
+  agreement: boolean;
+}
 
 const schema = yup.object().shape({
   fullName: yup.string()
     .required('Full name is required')
-    .min(2, 'Too short')
-    .max(50, 'Too long'),
+    .min(2, 'Too short (min 2 characters)')
+    .max(50, 'Too long (max 50 characters)'),
   address: yup.string()
     .required('Address is required')
-    .min(10, 'Please provide full address'),
+    .min(10, 'Please provide full address (min 10 characters)'),
   phone: yup.string()
     .required('Phone number is required')
-    .matches(/^[0-9]{10,15}$/, 'Invalid phone number'),
+    .matches(/^[0-9]{10,15}$/, 'Must be 10-15 digits'),
   email: yup.string()
-    .email('Invalid email')
+    .email('Invalid email format')
     .required('Email is required'),
-  birthdate: yup.string()
-    .required('Birthdate is required'),
-  occupation: yup.string().required('Occupation is required'),
-  hasAdoptedBefore: yup.boolean(),
+  birthdate: yup.date()
+    .required('Birthdate is required')
+    .max(new Date(), 'Birthdate cannot be in the future'),
+  occupation: yup.string()
+    .required('Occupation is required')
+    .min(2, 'Too short (min 2 characters)'),
+  hasAdoptedBefore: yup.string()
+    .required('Please select an option')
+    .oneOf(['true', 'false'], 'Please select an option'),
   householdMembers: yup.string()
-    .required('Please describe household members')
-    .min(10, 'Please provide more details'),
+    .required('Household members description is required')
+    .min(10, 'Please provide more details (min 10 characters)'),
   homeType: yup.string()
-    .required('Please specify your home type')
-    .oneOf(['House', 'Apartment', 'Condo', 'Other'], 'Invalid home type'),
+    .required('Home type is required'),
   hoursAlone: yup.string()
-    .required('Please specify hours pet would be alone')
-    .matches(/^\d+\s*(hours?|hrs?)?$/i, 'Enter valid hours (e.g., "8 hours")'),
-  hasOtherPets: yup.boolean(),
+    .required('Please select hours pet would be alone'),
+  hasOtherPets: yup.string()
+    .required('Please select an option')
+    .oneOf(['true', 'false'], 'Please select an option'),
   petExperience: yup.string()
-    .required('Please describe your pet experience')
-    .min(20, 'Please provide more details'),
+    .required('Pet experience is required')
+    .min(20, 'Please provide more details (min 20 characters)'),
   whyAdopt: yup.string()
-    .required('Please explain why you want to adopt')
-    .min(20, 'Please provide more details'),
+    .required('Adoption reason is required')
+    .min(20, 'Please provide more details (min 20 characters)'),
   agreement: yup.boolean()
     .oneOf([true], 'You must agree to the terms')
-    .required('Required'),
+    .required('Agreement is required'),
 });
 
 const homeTypes = [
-  { label: 'Select home type', value: '' },
   { label: 'House', value: 'House' },
   { label: 'Apartment', value: 'Apartment' },
   { label: 'Condo', value: 'Condo' },
   { label: 'Other', value: 'Other' },
 ];
 
-const requiredFields = [
-  'fullName', 'address', 'phone', 'email', 'birthdate', 'occupation',
-  'householdMembers', 'homeType', 'hoursAlone', 'petExperience', 'whyAdopt', 'agreement'
+const hoursAloneOptions = [
+  { label: 'Less than 2 hours', value: '2 hours' },
+  { label: '2-4 hours', value: '3 hours' },
+  { label: '4-6 hours', value: '5 hours' },
+  { label: '6-8 hours', value: '7 hours' },
+  { label: '8-10 hours', value: '9 hours' },
+  { label: 'More than 10 hours', value: '10+ hours' },
+];
+
+const yesNoOptions: RadioButtonProps[] = [
+  {
+    id: '1',
+    label: 'Yes',
+    value: 'true',
+    color: theme.primary,
+    labelStyle: { color: theme.text }
+  },
+  {
+    id: '2',
+    label: 'No',
+    value: 'false',
+    color: theme.primary,
+    labelStyle: { color: theme.text }
+  }
 ];
 
 const AdoptionFormScreen = () => {
@@ -69,14 +111,14 @@ const AdoptionFormScreen = () => {
     control, 
     handleSubmit, 
     formState: { errors, isValid, isSubmitting, touchedFields }, 
-    setValue 
-  } = useForm({
+    setValue,
+    trigger
+  } = useForm<FormValues>({
     resolver: yupResolver(schema),
-    mode: 'onChange',
+    mode: 'onBlur',
     defaultValues: {
-      homeType: '',
-      hasAdoptedBefore: false,
-      hasOtherPets: false,
+      hasAdoptedBefore: '',
+      hasOtherPets: '',
       agreement: false
     }
   });
@@ -85,41 +127,28 @@ const AdoptionFormScreen = () => {
   const route = useRoute();
   const { pet } = route.params as { pet: any };
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [birthdate, setBirthdate] = useState(new Date());
+  const [birthdate, setBirthdate] = useState<Date | null>(null);
 
-  const allRequiredFieldsTouched = () => {
-    return requiredFields.every(field => touchedFields[field]);
+  const handleRadioChange = (selectedId: string, fieldName: 'hasAdoptedBefore' | 'hasOtherPets') => {
+    const selectedOption = yesNoOptions.find(option => option.id === selectedId);
+    if (selectedOption) {
+      setValue(fieldName, selectedOption.value as 'true' | 'false', { shouldValidate: true });
+    }
   };
 
-  const isSubmitDisabled = () => {
-    return !isValid || !allRequiredFieldsTouched() || isSubmitting;
-  };
-
-  const showConfirmation = (data: any) => {
-    Alert.alert(
-      'Review Your Application',
-      `Please confirm your adoption application for ${pet.name}.`,
-      [
-        {
-          text: 'Edit',
-          style: 'cancel',
-        },
-        {
-          text: 'Confirm & Submit',
-          onPress: () => onSubmit(data),
-        },
-      ]
-    );
-  };
-
-  const onSubmit = async (data: any) => {
-    isSubmitting(true);
+  const onSubmit: SubmitHandler<FormValues> = async (data) => {
     try {
+      const submissionData = {
+        ...data,
+        hasAdoptedBefore: data.hasAdoptedBefore === 'true',
+        hasOtherPets: data.hasOtherPets === 'true'
+      };
+
       const applications = await AsyncStorage.getItem('applications');
       let updatedApplications = applications ? JSON.parse(applications) : [];
       
       const application = {
-        ...data,
+        ...submissionData,
         id: Date.now().toString(),
         petId: pet.id,
         petName: pet.name,
@@ -133,29 +162,33 @@ const AdoptionFormScreen = () => {
       Alert.alert(
         'Application Submitted!',
         `Thank you for applying to adopt ${pet.name}! We'll review your application and contact you soon.`,
-        [
-          { 
-            text: 'OK', 
-            onPress: () => {
-              navigation.goBack();
-            } 
-          }
-        ]
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
     } catch (error) {
       console.error('Error submitting application:', error);
-      Alert.alert(
-        'Submission Failed',
-        'There was an error submitting your application. Please try again.'
-      );
-    } finally {
-      isSubmitting(false);
+      Alert.alert('Error', 'Failed to submit application. Please try again.');
     }
   };
 
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      setBirthdate(selectedDate);
+      setValue('birthdate', selectedDate, { shouldValidate: true });
+      trigger('birthdate');
+    }
+  };
+
+  const isFormComplete = () => {
+    return isValid && Object.keys(touchedFields).length >= 12;
+  };
+
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={styles.container}>
+    <SafeAreaView edges={['top']} style={styles.safeArea}>
+      <ScrollView 
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={24} color={theme.text} />
@@ -164,302 +197,356 @@ const AdoptionFormScreen = () => {
           <View style={{ width: 24 }} />
         </View>
 
-        <Text style={styles.sectionHeader}>Personal Information</Text>
-        
-        <Controller
-          control={control}
-          render={({ field: { onChange, onBlur, value } }) => (
-            <FormInput
-              label="Full Name *"
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-              error={errors.fullName?.message}
-              placeholder="Your full name"
-              editable={!isSubmitting}
-            />
-          )}
-          name="fullName"
-        />
-        
-        <Controller
-          control={control}
-          render={({ field: { onChange, onBlur, value } }) => (
-            <FormInput
-              label="Address *"
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-              error={errors.address?.message}
-              placeholder="Your complete address"
-              editable={!isSubmitting}
-            />
-          )}
-          name="address"
-        />
-        
-        <Controller
-          control={control}
-          render={({ field: { onChange, onBlur, value } }) => (
-            <FormInput
-              label="Phone Number *"
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-              error={errors.phone?.message}
-              placeholder="e.g., 09123456789"
-              keyboardType="phone-pad"
-              editable={!isSubmitting}
-            />
-          )}
-          name="phone"
-        />
-
-        <Controller
-          control={control}
-          render={({ field: { onChange, onBlur, value } }) => (
-            <FormInput
-              label="Email *"
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-              error={errors.email?.message}
-              placeholder="your@email.com"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              editable={!isSubmitting}
-            />
-          )}
-          name="email"
-        />
-
-        <View style={styles.dateInputContainer}>
-          <Text style={styles.inputLabel}>Birthdate *</Text>
-          <TouchableOpacity 
-            style={styles.dateInput}
-            onPress={() => setShowDatePicker(true)}
-            disabled={isSubmitting}
-          >
-            <Text style={styles.dateText}>
-              {birthdate.toLocaleDateString()}
+        {/* Personal Information Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionHeader}>Personal Information</Text>
+          
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              Full Name <Text style={styles.required}>*</Text>
             </Text>
-            <Ionicons name="calendar" size={20} color={theme.text} />
-          </TouchableOpacity>
-          {errors.birthdate && (
-            <Text style={styles.errorText}>{errors.birthdate.message}</Text>
-          )}
-          {showDatePicker && (
-            <DateTimePicker
-              value={birthdate}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
-              onChange={(event, selectedDate) => {
-                setShowDatePicker(Platform.OS === 'ios');
-                if (selectedDate) {
-                  setBirthdate(selectedDate);
-                  setValue('birthdate', selectedDate.toISOString().split('T')[0], {
-                    shouldValidate: true,
-                    shouldDirty: true,
-                    shouldTouch: true
-                  });
-                }
-              }}
+            <Controller
+              control={control}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <TextInput
+                  style={styles.input}
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  placeholder="Enter your full name"
+                  placeholderTextColor="#999"
+                />
+              )}
+              name="fullName"
             />
-          )}
-        </View>
-        
-        <Controller
-          control={control}
-          render={({ field: { onChange, onBlur, value } }) => (
-            <FormInput
-              label="Occupation *"
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-              error={errors.occupation?.message}
-              placeholder="Your current job"
-              editable={!isSubmitting}
+            {errors.fullName && <Text style={styles.errorText}>{errors.fullName.message}</Text>}
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              Address <Text style={styles.required}>*</Text>
+            </Text>
+            <Controller
+              control={control}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <TextInput
+                  style={styles.input}
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  placeholder="Enter your complete address"
+                  placeholderTextColor="#999"
+                />
+              )}
+              name="address"
             />
-          )}
-          name="occupation"
-        />
-        
-        <Text style={styles.sectionHeader}>Living Situation</Text>
-        
-        <Controller
-          control={control}
-          render={({ field: { onChange, onBlur, value } }) => (
-            <FormInput
-              label="Who lives with you? *"
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-              error={errors.householdMembers?.message}
-              placeholder="List all household members and ages"
-              multiline
-              numberOfLines={3}
-              editable={!isSubmitting}
+            {errors.address && <Text style={styles.errorText}>{errors.address.message}</Text>}
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              Phone Number <Text style={styles.required}>*</Text>
+            </Text>
+            <Controller
+              control={control}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <TextInput
+                  style={styles.input}
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  placeholder="e.g., 09123456789"
+                  placeholderTextColor="#999"
+                  keyboardType="phone-pad"
+                />
+              )}
+              name="phone"
             />
-          )}
-          name="householdMembers"
-        />
-        
-        <View style={styles.pickerContainer}>
-          <Text style={styles.inputLabel}>Type of Home *</Text>
-          <Controller
-            control={control}
-            render={({ field: { onChange, value } }) => (
-              <View style={styles.picker}>
-                <Picker
-                  selectedValue={value}
-                  onValueChange={(itemValue) => {
-                    onChange(itemValue);
-                    setValue('homeType', itemValue, {
-                      shouldValidate: true,
-                      shouldDirty: true,
-                      shouldTouch: true
-                    });
-                  }}
-                  enabled={!isSubmitting}
-                >
-                  {homeTypes.map((item) => (
-                    <Picker.Item 
-                      key={item.value} 
-                      label={item.label} 
-                      value={item.value} 
-                    />
-                  ))}
-                </Picker>
-              </View>
-            )}
-            name="homeType"
-          />
-          {errors.homeType && (
-            <Text style={styles.errorText}>{errors.homeType.message}</Text>
-          )}
-        </View>
-        
-        <Controller
-          control={control}
-          render={({ field: { onChange, onBlur, value } }) => (
-            <FormInput
-              label="Hours pet would be alone daily *"
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-              error={errors.hoursAlone?.message}
-              placeholder="e.g., 8 hours"
-              editable={!isSubmitting}
+            {errors.phone && <Text style={styles.errorText}>{errors.phone.message}</Text>}
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              Email <Text style={styles.required}>*</Text>
+            </Text>
+            <Controller
+              control={control}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <TextInput
+                  style={styles.input}
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  placeholder="your@email.com"
+                  placeholderTextColor="#999"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              )}
+              name="email"
             />
-          )}
-          name="hoursAlone"
-        />
-        
-        <Text style={styles.sectionHeader}>Pet Experience</Text>
-        
-        <View style={styles.switchContainer}>
-          <Text style={styles.switchLabel}>Have you adopted a pet before?</Text>
-          <Controller
-            control={control}
-            render={({ field: { onChange, value } }) => (
-              <Switch
-                value={value}
-                onValueChange={onChange}
-                trackColor={{ false: '#767577', true: theme.primary }}
-                thumbColor={value ? '#f5dd4b' : '#f4f3f4'}
-                disabled={isSubmitting}
+            {errors.email && <Text style={styles.errorText}>{errors.email.message}</Text>}
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              Birthdate <Text style={styles.required}>*</Text>
+            </Text>
+            <TouchableOpacity 
+              style={styles.input}
+              onPress={() => setShowDatePicker(true)}
+            >
+              <Text style={birthdate ? styles.inputText : styles.placeholderText}>
+                {birthdate ? birthdate.toLocaleDateString() : 'Select your birthdate'}
+              </Text>
+              <Ionicons name="calendar" size={20} color={theme.text} />
+            </TouchableOpacity>
+            {showDatePicker && (
+              <DateTimePicker
+                value={birthdate || new Date()}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={handleDateChange}
+                maximumDate={new Date()}
               />
             )}
-            name="hasAdoptedBefore"
-          />
-        </View>
-        
-        <View style={styles.switchContainer}>
-          <Text style={styles.switchLabel}>Do you currently have other pets?</Text>
-          <Controller
-            control={control}
-            render={({ field: { onChange, value } }) => (
-              <Switch
-                value={value}
-                onValueChange={onChange}
-                trackColor={{ false: '#767577', true: theme.primary }}
-                thumbColor={value ? '#f5dd4b' : '#f4f3f4'}
-                disabled={isSubmitting}
-              />
-            )}
-            name="hasOtherPets"
-          />
-        </View>
-        
-        <Controller
-          control={control}
-          render={({ field: { onChange, onBlur, value } }) => (
-            <FormInput
-              label="Describe your experience with pets *"
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-              error={errors.petExperience?.message}
-              placeholder="What pets have you cared for before?"
-              multiline
-              numberOfLines={4}
-              editable={!isSubmitting}
+            {errors.birthdate && <Text style={styles.errorText}>{errors.birthdate.message}</Text>}
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              Occupation <Text style={styles.required}>*</Text>
+            </Text>
+            <Controller
+              control={control}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <TextInput
+                  style={styles.input}
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  placeholder="Your current job"
+                  placeholderTextColor="#999"
+                />
+              )}
+              name="occupation"
             />
-          )}
-          name="petExperience"
-        />
-        
-        <Controller
-          control={control}
-          render={({ field: { onChange, onBlur, value } }) => (
-            <FormInput
-              label="Why do you want to adopt this pet? *"
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-              error={errors.whyAdopt?.message}
-              placeholder="Tell us why you'd be a good match"
-              multiline
-              numberOfLines={4}
-              editable={!isSubmitting}
-            />
-          )}
-          name="whyAdopt"
-        />
-        
-        <View style={styles.switchContainer}>
-          <Text style={styles.switchLabel}>
-            I agree to provide a loving home and proper care for this pet *
-          </Text>
-          <Controller
-            control={control}
-            render={({ field: { onChange, value } }) => (
-              <Switch
-                value={value}
-                onValueChange={onChange}
-                trackColor={{ false: '#767577', true: theme.primary }}
-                thumbColor={value ? '#f5dd4b' : '#f4f3f4'}
-                disabled={isSubmitting}
-              />
-            )}
-            name="agreement"
-          />
+            {errors.occupation && <Text style={styles.errorText}>{errors.occupation.message}</Text>}
+          </View>
         </View>
-        {errors.agreement && (
-          <Text style={styles.errorText}>{errors.agreement.message}</Text>
-        )}
-        
+
+        {/* Living Situation Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionHeader}>Living Situation</Text>
+          
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              Who lives with you? <Text style={styles.required}>*</Text>
+            </Text>
+            <Controller
+              control={control}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <TextInput
+                  style={[styles.input, styles.multilineInput]}
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  placeholder="List all household members and ages"
+                  placeholderTextColor="#999"
+                  multiline
+                  numberOfLines={4}
+                />
+              )}
+              name="householdMembers"
+            />
+            {errors.householdMembers && <Text style={styles.errorText}>{errors.householdMembers.message}</Text>}
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              Type of Home <Text style={styles.required}>*</Text>
+            </Text>
+            <Controller
+              control={control}
+              render={({ field: { onChange, value } }) => (
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={value}
+                    onValueChange={onChange}
+                    style={styles.picker}
+                  >
+                    <Picker.Item label="Select your home type..." value="" />
+                    {homeTypes.map((option) => (
+                      <Picker.Item 
+                        key={option.value} 
+                        label={option.label} 
+                        value={option.value} 
+                      />
+                    ))}
+                  </Picker>
+                </View>
+              )}
+              name="homeType"
+            />
+            {errors.homeType && <Text style={styles.errorText}>{errors.homeType.message}</Text>}
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              Hours pet would be alone daily <Text style={styles.required}>*</Text>
+            </Text>
+            <Controller
+              control={control}
+              render={({ field: { onChange, value } }) => (
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={value}
+                    onValueChange={onChange}
+                    style={styles.picker}
+                  >
+                    <Picker.Item label="Select hours..." value="" />
+                    {hoursAloneOptions.map((option) => (
+                      <Picker.Item 
+                        key={option.value} 
+                        label={option.label} 
+                        value={option.value} 
+                      />
+                    ))}
+                  </Picker>
+                </View>
+              )}
+              name="hoursAlone"
+            />
+            {errors.hoursAlone && <Text style={styles.errorText}>{errors.hoursAlone.message}</Text>}
+          </View>
+        </View>
+
+        {/* Pet Experience Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionHeader}>Pet Experience</Text>
+          
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              Have you adopted a pet before? <Text style={styles.required}>*</Text>
+            </Text>
+            <Controller
+              control={control}
+              render={({ field: { value } }) => (
+                <RadioGroup
+                  radioButtons={yesNoOptions}
+                  onPress={(selectedId) => handleRadioChange(selectedId, 'hasAdoptedBefore')}
+                  selectedId={value === 'true' ? '1' : value === 'false' ? '2' : undefined}
+                  layout="row"
+                  containerStyle={styles.radioGroup}
+                />
+              )}
+              name="hasAdoptedBefore"
+            />
+            {errors.hasAdoptedBefore && <Text style={styles.errorText}>{errors.hasAdoptedBefore.message}</Text>}
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              Do you currently have other pets? <Text style={styles.required}>*</Text>
+            </Text>
+            <Controller
+              control={control}
+              render={({ field: { value } }) => (
+                <RadioGroup
+                  radioButtons={yesNoOptions}
+                  onPress={(selectedId) => handleRadioChange(selectedId, 'hasOtherPets')}
+                  selectedId={value === 'true' ? '1' : value === 'false' ? '2' : undefined}
+                  layout="row"
+                  containerStyle={styles.radioGroup}
+                />
+              )}
+              name="hasOtherPets"
+            />
+            {errors.hasOtherPets && <Text style={styles.errorText}>{errors.hasOtherPets.message}</Text>}
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              Describe your experience with pets <Text style={styles.required}>*</Text>
+            </Text>
+            <Controller
+              control={control}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <TextInput
+                  style={[styles.input, styles.multilineInput]}
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  placeholder="What pets have you cared for before? Describe your experience..."
+                  placeholderTextColor="#999"
+                  multiline
+                  numberOfLines={4}
+                />
+              )}
+              name="petExperience"
+            />
+            {errors.petExperience && <Text style={styles.errorText}>{errors.petExperience.message}</Text>}
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>
+              Why do you want to adopt this pet? <Text style={styles.required}>*</Text>
+            </Text>
+            <Controller
+              control={control}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <TextInput
+                  style={[styles.input, styles.multilineInput]}
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  placeholder="Tell us why you'd be a good match for this pet..."
+                  placeholderTextColor="#999"
+                  multiline
+                  numberOfLines={4}
+                />
+              )}
+              name="whyAdopt"
+            />
+            {errors.whyAdopt && <Text style={styles.errorText}>{errors.whyAdopt.message}</Text>}
+          </View>
+        </View>
+
+        {/* Agreement Section */}
+        <View style={styles.section}>
+          <View style={styles.inputGroup}>
+            <Controller
+              control={control}
+              render={({ field: { onChange, value } }) => (
+                <View style={styles.agreementContainer}>
+                  <Switch
+                    value={value}
+                    onValueChange={onChange}
+                    trackColor={{ false: '#767577', true: theme.primary }}
+                    thumbColor={value ? '#f5dd4b' : '#f4f3f4'}
+                  />
+                  <Text style={styles.agreementText}>
+                    I agree to provide a loving home and proper care for this pet <Text style={styles.required}>*</Text>
+                  </Text>
+                </View>
+              )}
+              name="agreement"
+            />
+            {errors.agreement && <Text style={styles.errorText}>{errors.agreement.message}</Text>}
+          </View>
+        </View>
+
+        {/* Submit Button */}
         <TouchableOpacity 
           style={[
             styles.submitButton,
-            isSubmitDisabled() && styles.disabledButton
+            !isFormComplete() && styles.disabledButton
           ]} 
-          onPress={handleSubmit(showConfirmation)}
-          disabled={isSubmitDisabled()}
+          onPress={handleSubmit(onSubmit)}
+          disabled={!isFormComplete() || isSubmitting}
         >
           <Text style={styles.submitButtonText}>
-            {isSubmitting ? 'Submitting...' : 
-             (isValid && allRequiredFieldsTouched()) ? 'Submit Application' : 'Complete All Required Fields'}
+            {isSubmitting ? 'Submitting...' : 'Submit Application'}
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -468,6 +555,10 @@ const AdoptionFormScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
   container: {
     padding: 20,
     paddingBottom: 40,
@@ -476,50 +567,104 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 25,
   },
   title: {
     fontSize: 22,
     fontWeight: 'bold',
     color: theme.text,
-    flex: 1,
     textAlign: 'center',
+    flex: 1,
+  },
+  section: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   sectionHeader: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginTop: 20,
-    marginBottom: 10,
     color: theme.primary,
-  },
-  switchContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: 15,
-    paddingVertical: 10,
-    paddingHorizontal: 5,
-    backgroundColor: 'white',
-    borderRadius: 8,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
-  switchLabel: {
-    flex: 1,
+  inputGroup: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 16,
+    color: theme.text,
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  required: {
+    color: 'red',
+  },
+  input: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    padding: 15,
+    fontSize: 16,
+    color: theme.text,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  inputText: {
     fontSize: 16,
     color: theme.text,
   },
+  placeholderText: {
+    fontSize: 16,
+    color: '#999',
+  },
+  multilineInput: {
+    minHeight: 100,
+    textAlignVertical: 'top',
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#f9f9f9',
+  },
+  picker: {
+    height: 50,
+    width: '100%',
+  },
+  radioGroup: {
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
   errorText: {
-    color: theme.danger,
-    marginBottom: 15,
-    marginLeft: 5,
+    color: 'red',
     fontSize: 14,
+    marginTop: 5,
+  },
+  agreementContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  agreementText: {
+    marginLeft: 10,
+    fontSize: 16,
+    color: theme.text,
+    flex: 1,
   },
   submitButton: {
     backgroundColor: theme.primary,
-    padding: 15,
+    padding: 16,
     borderRadius: 8,
     alignItems: 'center',
-    marginTop: 30,
-    marginBottom: 20,
+    marginTop: 20,
   },
   disabledButton: {
     backgroundColor: '#cccccc',
@@ -528,38 +673,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
-  },
-  dateInputContainer: {
-    marginBottom: 15,
-  },
-  inputLabel: {
-    fontSize: 16,
-    marginBottom: 5,
-    color: theme.text,
-  },
-  dateInput: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    padding: 15,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  dateText: {
-    fontSize: 16,
-    color: theme.text,
-  },
-  pickerContainer: {
-    marginBottom: 15,
-  },
-  picker: {
-    backgroundColor: 'white',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    overflow: 'hidden',
   },
 });
 
